@@ -1,5 +1,3 @@
-[![pipeline status](https://gitlab.com/kevin-ansible-roles/percona-xtradb-cluster/badges/master/pipeline.svg)](https://gitlab.com/kevin-ansible-roles/percona-xtradb-cluster/-/commits/master)
-
 Percona XtraDB Cluster 8
 ========================
 
