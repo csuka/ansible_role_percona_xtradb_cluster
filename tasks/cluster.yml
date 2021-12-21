@@ -1,0 +1,169 @@
+---
+- name: cluster | check if already clustered
+  shell: mysql -e "show status like 'wsrep%';"
+  changed_when: false
+  register: cluster
+  when: not arbiter
+
+- name: cluster | set fact for arbiter
+  set_fact:
+    cluster:
+      stdout: something
+  when: arbiter
+
+- name: cluster | set fact when host is clustered
+  set_fact:
+    cluster_state: true
+  when:
+    - "'wsrep_protocol_version' in cluster.stdout"
+    - cluster is defined
+
+- name: cluster | set fact when host is not clustered
+  set_fact:
+    cluster_state: false
+  when: "'wsrep_protocol_version' not in cluster.stdout"
+
+- block:
+
+    - name: cluster | create dictionary
+      set_fact:
+        status: "{{ dict(keys|zip(values)) }}"
+      vars:
+        keys: "{{ ansible_play_hosts }}"
+        values: "{{ ansible_play_hosts
+                    | map('extract', hostvars, ['cluster_state'])
+                    | list }}"
+
+    - name: cluster | set fact when at least one is clustered
+      set_fact:
+        clustered: false
+      when: status.values() | list is not any
+
+    - name: cluster | set fact when not clustered
+      set_fact:
+        clustered: true
+      when: status.values() | list is any
+
+  run_once: true
+
+- name: cluster | cluster when not clustered
+  block:
+    - block:
+        - name: cluster | ensure mysql is stopped
+          systemd:
+            name: mysql
+            state: stopped
+
+        - name: cluster | ensure galera.cnf is set
+          template:
+            src: galera.cnf.j2
+            dest: /etc/mysql/galera.cnf
+            owner: root
+            group: root
+            mode: '0664'
+
+        - name: cluster | remove innodb_log_files
+          file:
+            path: "{{ item.name }}"
+            state: absent
+          loop:
+            - {name: '/var/lib/mysql/ib_logfile0'}
+            - {name: '/var/lib/mysql/ib_logfile1'}
+
+        - name: cluster | bootstrap percona on bootstrapper
+          systemd:
+            name: mysql@bootstrap.service
+            state: started
+          when: bootstrapper
+
+        - name: cluster | create SST user on bootstrapper
+          mysql_user:
+            login_unix_socket: /var/run/mysqld/mysqld.sock
+            login_host: ''
+            user: sst
+            password: "{{ percona_sst_password }}"
+            priv: "*.*:grant,reload,lock tables,process,replication client"
+          no_log: true
+          when:
+            - bootstrapper
+
+        - name: cluster | start percona on not bootstrapper
+          systemd:
+            name: mysql
+            state: started
+          when: not bootstrapper
+
+        - name: cluster | pause 3 seconds to let hosts sync
+          pause:
+            seconds: 3
+
+        - name: cluster | stop percona bootstrap service, start mysql normally
+          systemd:
+            name: "{{ item.name }}"
+            state: "{{ item.state }}"
+          when: bootstrapper
+          loop:
+            - {name: 'mysql@bootstrap.service', state: 'stopped'}
+            - {name: 'mysql', state: 'started'}
+
+        - name: cluster | pause 5 seconds to let hosts sync
+          pause:
+            seconds: 5
+
+        - name: cluster | verify if wsrep is successful - check 1
+          shell: >
+            mysql -e "show status like 'wsrep%';" |
+            grep wsrep_local_state_comment
+          register: wsrep_check_one
+
+        - name: cluster | fail if not Synced
+          fail:
+            msg: "Bootstrapping has failed. Please check the logs, and fix"
+          when: '"Synced" not in wsrep_check_one.stdout'
+
+      when: not arbiter
+
+    - name: cluster | create test db on bootstrapper - check 2
+      shell: mysql -e "CREATE DATABASE percona_test;"
+      when: bootstrapper
+
+    - name: cluster | pause a second to let hosts sync
+      pause:
+        seconds: 1
+
+    - name: cluster | set fact to choose host to run check
+      set_fact:
+        host_master_not_one: "{{ item }}"
+      when:
+        - host_master_not_one is not defined
+        - not hostvars[item].percona_cluster.bootstrapper
+        - "'master' == hostvars[item].percona_cluster.role"
+      run_once: true
+      loop: "{{ ansible_play_hosts }}"
+
+    - name: cluster | create table on one other host
+      shell: >-
+        mysql -e "use percona_test;
+        CREATE TABLE example (node_id INT PRIMARY KEY, node_name VARCHAR(30));"
+      delegate_to: "{{ host_master_not_one }}"
+      run_once: true
+
+    - name: cluster | verify if table is present on bootstrapper
+      shell: mysql -e "use percona_test ; show tables;" | grep example
+      register: test_two
+      when: bootstrapper
+
+    - name: cluster | fail when replication failed
+      fail:
+        msg: "It seems a table could not be replicated. Please check and fix"
+      when:
+        - bootstrapper
+        - '"example" not in test_two.stdout'
+
+    - name: cluster | drop test database on bootstrapper
+      shell: mysql -e "DROP DATABASE percona_test;"
+      when: bootstrapper
+
+  when:
+    - not clustered
+    - "'wsrep_protocol_version' not in cluster.stdout"

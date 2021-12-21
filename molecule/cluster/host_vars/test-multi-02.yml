@@ -1,0 +1,19 @@
+---
+percona_cluster:
+  enabled: true
+  name: 'galera-cluster'
+  role: master
+  bootstrapper: false
+  server_id: '12'
+  ip_address: "{{ ansible_default_ipv4.address }}"
+
+percona_backup:
+  enabled: true
+  dir: /var/mysql_dump/
+  keepdays: '1'
+  hour: '02'
+  minute: '30'
+  minfree: 1
+  skip:
+    databases: []
+    tables: []

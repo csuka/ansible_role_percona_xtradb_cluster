@@ -1,0 +1,27 @@
+---
+- name: users | set fact to choose host to perform users task
+  set_fact:
+    host_on_users: "{{ item }}"
+  loop: "{{ ansible_play_hosts }}"
+  when: not arbiter
+
+- name: users | set fact for other hosts
+  set_fact:
+    host_on_users: false
+  when: host_on_users is undefined
+
+- name: users | create or change users on one node
+  mysql_user:
+    login_host: ''
+    login_unix_socket: "{{ mysqld.socket }}"
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    encrypted: "{{ item.encrypted }}"
+    priv: "{{ item.privs }}"
+    host: "{{ item.host }}"
+    state: "{{ item.state }}"
+    update_password: always
+  loop: "{{ percona_users }}"
+  changed_when: false
+  when: inventory_hostname == host_on_users or host_count == '1'
+  no_log: true

@@ -1,0 +1,40 @@
+---
+percona_cluster:
+  enabled: true
+  name: 'galera-cluster'
+  role: arbiter
+  bootstrapper: false
+  server_id: '11'
+  ip_address: "{{ ansible_default_ipv4.address }}"
+
+cust_pwd: /root/cust
+
+percona_databases:
+  - my_db
+  - another_db
+
+percona_users:
+  - name: john
+    password: letmein
+    privs: '*.*:ALL,GRANT'
+    state: present
+    encrypted: false
+    host: localhost
+  - name: erik
+    password: another_pass
+    privs: '*.*:ALL,GRANT'
+    state: present
+    encrypted: false
+    host: localhost
+
+percona_backup:
+  enabled: true
+  dir: /var/mysql_dump/
+  keepdays: '3'
+  hour: '06'
+  minute: '30'
+  minfree: 5  # minimum free disk space in GB to create a backup
+  skip:
+    databases:
+      - my_db
+    tables: []

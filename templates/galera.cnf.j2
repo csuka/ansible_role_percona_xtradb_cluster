@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+
+[mysqld]
+# Galera Provider Configuration
+wsrep_on                      = ON
+wsrep_provider                = /usr/lib64/galera4/libgalera_smm.so
+
+# Galera Cluster Configuration
+wsrep_cluster_name            = {{ percona_cluster.name }}
+wsrep_cluster_address         = "gcomm://{{ ip_without_arbiter | join(',' ) }}"
+
+# wsrep_notify_cmd              = /usr/bin/wsrep_notify.sh
+
+# Galera Synchronization Configuration
+wsrep_sst_method              = xtrabackup-v2
+
+# Galera Node Configuration
+wsrep_node_address            = {{ percona_cluster.ip_address }}
+wsrep_node_name               = {{ inventory_hostname }}

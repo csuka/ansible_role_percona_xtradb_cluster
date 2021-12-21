@@ -1,0 +1,56 @@
+---
+# assertions are required. Do not skip it
+- include_tasks: assert.yml
+  tags:
+    - assert
+    - always
+
+# ip addr is required. Do not skip it
+- include_tasks: ip_addr.yml
+  when: percona_cluster.enabled
+  tags:
+    - ip_addr
+    - always
+
+- include_tasks: install.yml
+  tags: install
+
+- include_tasks: root.yml
+  tags: root
+  when: not arbiter
+
+- include_tasks: certs.yml
+  tags: certs
+
+- include_tasks: config.yml
+  tags: configs
+
+- include_tasks: cluster.yml
+  tags: cluster
+  when: percona_cluster.enabled
+
+- include_tasks: cluster_scale.yml
+  tags: cluster_scale
+  when: percona_cluster.enabled
+
+- include_tasks: arbiter.yml
+  tags: arbiter
+  when: arbiter
+
+- include_tasks: backup.yml
+  tags: backup
+  when: percona_backup.enabled
+
+- include_tasks: databases.yml
+  tags: databases
+  when: percona_databases | length > 0
+
+- include_tasks: users.yml
+  tags: users
+  when: percona_users | length > 0
+
+- include_tasks: pmm.yml
+  tags: pmm
+  when:
+    - percona_pmm.enabled
+    - not arbiter

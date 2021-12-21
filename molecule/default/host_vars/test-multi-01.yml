@@ -1,0 +1,109 @@
+---
+percona_root_password: something
+percona_system_password: something
+percona_sst_password: something
+cust_pwd: /root/cust
+
+percona_databases:
+  - my_db
+  - another_db
+
+percona_users:
+  - name: john
+    password: letmein
+    privs: '*.*:ALL,GRANT'
+    state: present
+    encrypted: false
+    host: localhost
+  - name: erik
+    password: another_pass
+    privs: '*.*:ALL,GRANT'
+    state: present
+    encrypted: false
+    host: localhost
+
+percona_backup:
+  enabled: true
+  dir: /var/mysql_dump/
+  keepdays: '3'
+  hour: '06'
+  minute: '30'
+  minfree: 5  # minimum free disk space in GB to create a backup
+  skip:
+    databases:
+      - my_db
+    tables: []
+
+# no changes are made to these variables, but are set as a reference
+mysqld:
+  bind_address: '0.0.0.0'
+  port: 3306
+  basedir: /usr
+  datadir: /var/lib/mysql
+  tmpdir: /var/tmp
+  lc_messages_dir: /usr/share/mysql
+  socket: /var/run/mysqld/mysqld.sock
+  pid_path: /var/run/mysqld
+  pid: /var/run/mysqld/mysqld.pid
+  skip_name_resolve: false
+  default_storage_engine: InnoDB
+  error_log: '{{ percona_log_dir }}/error.log'
+  slow_log: '{{ percona_log_dir }}/mysql-slow.log'
+  slow_query_time: 3
+  slow_log_verbosity: full
+  expire_logs_seconds: 86400
+  max_binlog_size: 100M
+  max_allowed_packet: 16M
+  max_connections: 150
+  max_user_connections: 146
+  wait_timeout: 300
+  interactive_timeout: 600
+  net_write_timeout: 60
+  net_read_timeout: 30
+  open_files_limit: 65535
+  thread_pool_size: 16
+  thread_stack: 256K
+  table_open_cache: 4096
+  table_open_cache_instances: 1
+  table_definition_cache: 2448
+  back_log: 128
+  thread_cache_size: 16
+  tmp_table_size: 16M
+  max_heap_table_size: 16M
+  slow_query_log: 0
+  key_buffer_size: 256M
+  sort_buffer_size: 1M
+  read_buffer_size: 1M
+  read_rnd_buffer_size: 4M
+  myisam_sort_buffer_size: 64M
+  myisam_recover_options: BACKUP
+  query_cache_size: 16M
+  query_cache_limit: 1M
+  lower_case_table_names: 0
+  long_query_time: 2
+  mysqldump_max_allowed_packet: 64M
+  log_queries_not_using_indexes: 1
+  log_slow_admin_statements: 1
+  sql_mode: "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,\
+    NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+  default:
+    charset: utf8mb4
+    collate: utf8mb4_unicode_ci
+  innodb:
+    dedicated_server: enabled
+    flush_method: O_DIRECT
+    file_per_table: 1
+    temp_data_file_path: ibtmp1:12M:autoextend:max:1G
+    buffer_pool_chunk_size: 128M
+    log_buffer_size: 16M
+    flush_log_at_trx_commit: 2
+    autoinc_lock_mode: 2
+    file_format: Barracuda
+    large_prefix: 1
+    adaptive_hash_index: 1
+    adaptive_hash_index_parts: 8
+    lru_scan_depth: 1024
+    read_io_threads: 4
+    write_io_threads: 4
+  binlog_format: ROW
+  binlog_row_image: minimal

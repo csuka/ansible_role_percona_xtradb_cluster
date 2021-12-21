@@ -1,0 +1,84 @@
+---
+- name: pmm | set fact for pmm server url
+  set_fact:
+    pmm_url: "https://admin:{{ percona_pmm.server_pass }}\
+      @{{ percona_pmm.server_ip }}:443"
+
+- name: pmm | ensure pmm2-client is installed
+  dnf:
+    name: "{{ percona_pmm.pkg }}"
+
+- name: pmm | check whether we are already configured for our host
+  shell: pmm-admin list
+  register: pmm_status
+  changed_when: false
+  failed_when: false
+
+- name: pmm | set fact when not configured
+  set_fact:
+    pmm_configured: true
+  when: not pmm_status.stderr | length > 1
+
+- name: pmm | set fact when not configured
+  set_fact:
+    pmm_configured: false
+  when: pmm_status.stderr | length > 1
+
+- name: pmm | configure pmm client to pmm server
+  shell: >
+    pmm-admin config
+    --server-url={{ pmm_url }}
+    --server-insecure-tls
+    --force {{ percona_pmm.local_ip }}
+  when: not pmm_configured
+
+- name: pmm | create pmm user, on one server
+  mysql_user:
+    login_host: ''
+    login_unix_socket: "{{ mysqld.socket }}"
+    name: "{{ percona_pmm.db_user }}"
+    password: "{{ percona_pmm.db_user }}"
+    encrypted: false
+    priv: "*.*:SELECT,PROCESS,SUPER,REPLICATION CLIENT,RELOAD"
+    host: localhost
+    update_password: always
+  changed_when: false
+  when:
+    - bootstrapper or host_count == '1'
+    - not pmm_configured
+  no_log: true
+
+- name: pmm | remove mysql service when scaling
+  shell: pmm-admin remove mysql {{ inventory_hostname }}-mysql
+  when: >
+     (cluster_scale is defined and cluster_scale) or
+     (clustered is defined and not clustered) and
+     (host_count != '1') and
+     (pmm_configured)
+
+- name: pmm | add mysql metrics to pmm server for cluster
+  shell: >
+    pmm-admin add mysql
+    --username={{ percona_pmm.db_user }}
+    --password={{ percona_pmm.db_pass }}
+    --cluster={{ percona_cluster.name }}
+    --socket={{ mysqld.socket }}
+    --server-insecure-tls
+    --server-url={{ pmm_url }}
+  no_log: true
+  when:
+    - percona_cluster.enabled
+    - not pmm_configured
+
+- name: pmm | add mysql metrics to pmm server for single host
+  shell: >
+    pmm-admin add mysql
+    --username={{ percona_pmm.db_user }}
+    --password={{ percona_pmm.db_pass }}
+    --socket={{ mysqld.socket }}
+    --server-insecure-tls
+    --server-url={{ pmm_url }}
+  no_log: true
+  when:
+    - not percona_cluster.enabled
+    - not pmm_configured

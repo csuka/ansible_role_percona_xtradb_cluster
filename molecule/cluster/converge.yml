@@ -1,0 +1,31 @@
+---
+# required for fact gathering, ipv4 address
+- name: Converge
+  hosts:
+    - test-multi-01
+    - test-multi-02
+    - test-multi-03
+    - test-multi-04
+  tasks:
+    - name: install iproute
+      dnf:
+        name: iproute
+
+- name: Converge
+  hosts:
+    - test-multi-01
+    - test-multi-02
+    - test-multi-03
+  any_errors_fatal: true
+  roles:
+    - ../percona-xtradb-cluster
+
+- name: Converge
+  hosts:
+    - test-multi-01
+    - test-multi-02
+    - test-multi-03
+    - test-multi-04
+  any_errors_fatal: true
+  roles:
+    - ../percona-xtradb-cluster

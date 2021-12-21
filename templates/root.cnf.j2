@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+
+# This file is symlinked to /root/.my.cnf to use passwordless login for the root user
+
+[client]
+socket   = {{ mysqld.socket }}
+user     = debian-sys-maint
+password = {{ percona_system_password }}
+
+[mysql_upgrade]
+socket   = {{ mysqld.socket }}
+user     = debian-sys-maint
+password = {{ percona_system_password }}

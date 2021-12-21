@@ -1,0 +1,123 @@
+---
+- block:
+    - name: config | set config files
+      template:
+        src: "{{ item.src }}"
+        dest: "/etc/{{ item.dest }}"
+        owner: root
+        group: root
+        mode: '0644'
+      loop:
+        - {src: 'mysqld.cnf.j2', dest: 'mysql/mysqld.cnf'}
+        - {src: 'logrotate.j2', dest: 'logrotate.d/mysql'}
+        - {src: 'my.cnf.j2', dest: 'my.cnf'}
+      register: config_set
+
+    - name: config | test mysql config
+      shell: mysqld --defaults-file=/etc/mysql/mysqld.cnf --validate-config
+      changed_when: false
+
+    - name: config | clean up unused files / directories
+      file:
+        path: /etc/my.cnf.d/
+        state: absent
+
+    - name: config | stat log dir
+      stat:
+        path: "{{ percona_log_dir }}"
+      register: datadir
+
+    - name: config | ensure default directories exist
+      file:
+        path: "{{ item.path }}"
+        state: "{{ item.state }}"
+        owner: mysql
+        group: mysql
+        mode: "{{ item.mode }}"
+      when: not datadir.stat.exists
+      loop:
+        - {path: "{{ percona_log_dir }}", state: 'directory', mode: '0775'}
+        - {path: "{{ mysqld.pid_path }}", state: 'directory', mode: '0775'}
+
+    - name: config | stat if log file exist
+      stat:
+        path: "{{ mysqld.slow_log }}"
+      register: mysql_slow_log
+
+    - name: config | ensure log files exist
+      copy:
+        content: ""
+        dest: "{{ item.dest }}"
+        force: true
+        group: mysql
+        owner: mysql
+        mode: "{{ item.mode }}"
+      loop:
+        - {dest: "{{ mysqld.slow_log }}", mode: '0700'}
+        - {dest: "{{ mysqld.error_log }}", mode: '0700'}
+      when: not mysql_slow_log.stat.exists
+
+  when: not arbiter
+
+- block:
+    - name: config | create dict of config change
+      set_fact:
+        status: "{{ dict(keys|zip(values)) }}"
+      vars:
+        keys: "{{ ansible_play_hosts }}"
+        values: "{{ ansible_play_hosts|
+                    map('extract', hostvars, ['config_set', 'changed'])
+                    | list }}"
+
+    - name: config | set fact when no config has changed
+      set_fact:
+        config_changed: false
+      when: status.values() | list is not any
+
+    - name: config | set fact when a config changed
+      set_fact:
+        config_changed: true
+      when: status.values() | list is any
+
+  run_once: true
+
+- name: config | set fact for arbiter
+  set_fact:
+    host_which_is_skipped: "{{ inventory_hostname }}"
+  when: arbiter
+
+- name: config | set fact for not arbiters
+  set_fact:
+    host_which_is_skipped: nope
+  when: not arbiter
+
+# restart mysql, then verify if we can show databases
+# if that fails, the play is stopped
+- name: config | restart mysql service one by one
+  shell: >
+    systemctl restart mysql ; mysql -e 'show databases;' &&
+    sleep {{ percona_restart_time }}
+  run_once: true
+  delegate_to: "{{ item }}"
+  loop: "{{ ansible_play_hosts }}"
+  args:
+    warn: false
+  when:
+    - host_count == '1' or item != host_which_is_skipped
+    - result is undefined or result is not failed
+    - (installed is defined and installed) or
+      (arbiter_installed is defined and arbiter_installed)
+    - percona_ansible_managed
+    - not arbiter
+    - config_changed
+  register: result
+
+- meta: end_play
+  when: result is failed
+
+- name: config | ensure mysql is started and enabled
+  systemd:
+    name: mysql
+    state: started
+    enabled: true
+  when: not arbiter

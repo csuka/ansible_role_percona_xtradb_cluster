@@ -1,0 +1,74 @@
+---
+- name: certs | stat the ca.pem file
+  stat:
+    path: /etc/mysql/certs/ca.pem
+  register: ca_check
+
+- name: certs | stat certs on local machine
+  stat:
+    # correct path here TODO
+    path: "/tmp{{ cust_pwd }}/ca.pem"
+  register: local_cert
+  become: false
+  delegate_to: localhost
+
+- name: certs | ensure certs are placed when these are present
+  copy:
+    # correct path here TODO
+    src: "/tmp{{ cust_pwd }}/{{ item }}.pem"
+    dest: "/etc/mysql/certs/{{ item }}.pem"
+    mode: '0600'
+    owner: mysql
+    group: mysql
+  loop: "{{ percona_certs }}"
+  when: local_cert.stat.exists
+
+- name: certs | set fact to copy certs from a host
+  set_fact:
+    certs_host: "{{ item }}"
+  when:
+    - certs_host is not defined
+    - host_count == '1' or hostvars[item].percona_cluster.bootstrapper
+  run_once: true
+  loop: "{{ ansible_play_hosts }}"
+
+- name: certs | fetch files
+  fetch:
+    src: "/var/lib/mysql/{{ item }}.pem"
+    flat: true
+    # sane path here TODO
+    dest: "/tmp{{ cust_pwd }}/"
+  loop: "{{ percona_certs }}"
+  delegate_to: "{{ certs_host }}"
+  when: not local_cert.stat.exists
+
+- name: certs | copy files if not exist
+  copy:
+    src: "/tmp{{ cust_pwd }}/{{ item }}.pem"
+    dest: "/etc/mysql/certs/{{ item }}.pem"
+    mode: '0600'
+    owner: mysql
+    group: mysql
+  loop: "{{ percona_certs }}"
+  when:
+    - not ca_check.stat.exists
+    - not local_cert.stat.exists
+
+- name: certs | ensure certs are removed in /var/lib/mysql
+  file:
+    state: absent
+    path: "/var/lib/mysql/{{ item }}.pem"
+  loop: "{{ percona_certs }}"
+  when:
+    - not ca_check.stat.exists
+    - not arbiter
+
+- name: certs | ensure certs are symlinked
+  file:
+    state: link
+    src: "/etc/mysql/certs/{{ item }}.pem"
+    dest: "/var/lib/mysql/{{ item }}.pem"
+  loop: "{{ percona_certs }}"
+  when:
+    - not ca_check.stat.exists
+    - not arbiter

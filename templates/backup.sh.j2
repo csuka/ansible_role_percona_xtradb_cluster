@@ -1,0 +1,585 @@
+#!/bin/bash
+
+# {{ ansible_managed }}
+
+# Configurable variables:
+# DB_HOST        The MySQL hostname of the host you would like
+#                to backup. Should be a FQDN, localhost or empty
+#                Sample: DB_HOST=db01.example.com
+# DB_USER        The MySQL login user
+#                Sample: DB_USER=root
+# DB_PASS        The MySQL password for the specified user
+#                Sample: DB_PASS=letmein
+# SKIP_DATABASES Array of databases to skip
+#                Sample: SKIP_DATABASES=(information_schema)
+# SKIP_TABLES    Array of tables to skip, prefixed with database
+#                Sample: SKIP_TABLES=(mysql.host)
+# LOCAL_BKP_DIR  The directory to put the backup in. It is not
+#                advised to use the /tmp or /var/tmp directory
+#                for security reasons.
+#                Sample: LOCAL_BKP_DIR=/backup/mysql
+# DEBUG          Boolean to enable or disable debug output
+#                Sample: DEBUG=0		(Default)
+# DRY_RUN        Run the backup, but don't export anything. This
+#                is for testing purposes and implicidly enables
+#                the debug option too. This should NOT be used
+#                for real backups!
+# DISK_MIN_FREE  The minimum amount of diskspace in Gigabytes
+#                Sample: DISK_MIN_FREE=3	(Default)
+# BIN_MYSQL      Specify the location and name of the `mysql`
+#                binary file
+# BIN_MYSQLDUMP  Specify the location and name of the `mysqldump`
+#                binary file
+# RM_OLDBACKUP   Specify if you would like to remove the old
+#                backup or not.
+# CUSTOM_UMASK   Specify the umask you would like to use
+#
+# Note: If you want to put any of these files in a configuration
+#       file, make sure you prefix them with CONFIG_.
+#       Sample: CONFIG_DEBUG=1
+#
+#       It is also possible to use command line variable input in
+#       the form of:
+#       DB_USER=root DB_PASS=letmein ./mysql-backup.sh
+#       The config file wil override a variable, if present!
+#
+# $Id$
+
+LOCAL_BKP_DIR="{{ percona_backup.dir }}$(date -I)"
+
+SKIP_DATABASES=({% for skipdb in percona_backup.skip.databases | default([]) %}{{ skipdb }} {% endfor %}information_schema performance_schema)
+
+SKIP_TABLES=({% for skiptbl in percona_backup.skip.tables | default([]) %}{{ skiptbl }} {% endfor %})
+
+DISK_MIN_FREE={{ percona_backup.minfree }}
+
+CUSTOM_UMASK=0002
+
+{% raw %}
+################################################################
+#   Start actual script. Changes below must be communicated!   #
+################################################################
+
+# Catch pipe errors that occur in mysqldump when piping through
+# gzip.
+set -o pipefail
+
+# Prepare error and warning array
+ERROR_REASONS=()
+WARNING_REASONS=()
+
+function printWarning {
+      echo
+      echo "###################################################################"
+      echo "#                       WARNINGS DETECTED                         #"
+      echo "###################################################################"
+
+      for WARNINGS in "${WARNING_REASONS[@]}"
+      do
+         ((count++))
+         echo -e "$count) ${WARNINGS}"
+      done
+}
+
+function printError {
+   if [ ${#ERROR_REASONS[@]} -ne 0 ]; then
+      count=0
+
+      echo
+      echo "###################################################################"
+      echo "#                        ERRORS DETECTED                          #"
+      echo "###################################################################"
+
+      echo -e "\nScript found ${#ERROR_REASONS[@]} errors:\n"
+
+      for ERRORS in "${ERROR_REASONS[@]}"
+      do
+         ((count++))
+         echo -e "$count) ${ERRORS}"
+      done
+
+      echo -e "\nExiting with errors..."
+      exit 1
+   else
+      if [ ${#WARNING_REASONS[@]} -ne 0 ]; then
+         printWarning
+         echo -e "\nExiting with warnings..."
+      fi
+      exit 0
+   fi
+}
+
+# Only root is allowed to run the script
+if [ ! "$(id -u -n)" = root ]; then
+   ERROR_REASONS+=("Only user 'root' can run this script!")
+   printError
+fi
+
+# Find and read our configuration file. The pre-set configuration
+# file location can be overridden by placing a configuration file
+# in the same directory as this script.
+
+# Get our current working directory
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# LOCAL_CONFIG="${DIR}/mysql-backup.conf" # we don't use the local config anymore
+unset DIR
+
+# Check if the configuration file exists and has a size greater
+# then zero. If this is the case, strip out the vars and read it
+
+# not used anymore
+# if [[ -s $LOCAL_CONFIG ]] && [[ $LOCAL_CONFIG != $CONFIG_FILE ]]; then
+#    # Local configuration found
+#    CONFIG_TYPE=1
+#    FILENAME=$LOCAL_CONFIG
+# else
+#    if [[ -s $CONFIG_FILE ]];then
+#       FILENAME=$CONFIG_FILE
+#       CONFIG_TYPE=2
+#    else
+#       echo "No configuration file found..."
+#       CONFIG_TYPE=3
+#    fi
+# fi
+# if [[ $CONFIG_TYPE == 1 ]] || [[ $CONFIG_TYPE == 2 ]]; then
+#    STATS=$(stat -c %A "${FILENAME}")
+#
+#    if [[ ! $STATS == "-rw-------" ]]; then
+#       PERMISSION_TXT=""
+#       if [[ $STATS == "-rw-r--r--" ]]; then
+#          PERMISSION_TXT+="Please remove the READ rights from the 'group' and 'others' of the configuration file"
+#       else
+#          PERMISSION_TXT+="The permissions are incorrect on the configuration file!"
+#       fi
+#       PERMISSION_TXT+="\n     Use 'chmod 600 ${FILENAME}'"
+#       WARNING_REASONS+=("${PERMISSION_TXT}")
+#       unset PERMISSION_TXT
+#    fi
+#    unset STATS
+#
+#    source <( sed -n 's/^\s*CONFIG_*//p' $FILENAME )
+#    unset FILENAME
+# fi
+
+# Check if multiple commandline parameters are given
+if [[ "$#" -gt 1 ]];then
+   ERROR_REASONS+=("Multiple commandline parameters given, only one allowed...")
+   printError
+fi
+
+# Check if we are in DRY RUN mode, and force DEBUG then
+[ "$#" -eq 1 ] && [[ "$1" == --dry-run ]] && DRY_RUN=1
+
+if [[ $DRY_RUN -gt 0 ]];then
+   echo "Running in DRY_RUN mode, no real backup is started..."
+   DEBUG=1
+fi
+
+# Override DEBUG parameter from command line
+[ "$#" -eq 1 ] && [[ "$1" == --debug ]] && DEBUG=1
+# Print debug status
+if [[ $DEBUG -eq 1 ]];then
+   if [[ $DRY_RUN -gt 0 ]];then
+      echo "Forcing debug mode..."
+   else
+      echo "Debug enabled..."
+   fi
+   case $CONFIG_TYPE in
+      1) echo "Using custom configuration in script-directory ($LOCAL_CONFIG)..." ;;
+      2) echo "Using default configuration file..." ;;
+      3) echo "Config file '$CONFIG_FILE' or '$LOCAL_CONFIG' was not found..." ;;
+   esac
+fi
+unset LOCAL_CONFIG
+unset CONFIG_TYPE
+
+# Finding our binaries
+# First search for crucial binaries:
+BIN_MKDIR=`which mkdir`
+BIN_RM=`which rm`
+BIN_GZIP=`which gzip`
+if [[ -z $BIN_MKDIR || -z $BIN_RM || -z $BIN_GZIP ]];then
+   ERROR_REASONS+=("The binary 'mkdir', 'rm' or 'gzip' could not be found! Maybe command 'which' is missing, or a currupt system?")
+fi
+
+# Next, find MySQL binaries
+if [[ -z $BIN_MYSQL ]];then
+   # No config set, lets try to find the binaries ourselves
+   BIN_MYSQL=`which mysql`
+   # Verify if the found binary is okey
+   if [[ -x $BIN_MYSQL && -f $BIN_MYSQL ]];then
+      [[ $DEBUG -eq 1 ]] && echo -e "Manually found 'mysql' in '$BIN_MYSQL'..."
+   else
+      ERROR_REASONS+=("The binary 'mysql' is invalid or has not been found!")
+      printError
+   fi
+else
+   # A binary location is given, lets check if the file exists
+   if [[ -x $BIN_MYSQL && -f $BIN_MYSQL ]];then
+      [[ $DEBUG -eq 1 ]] && echo -e "Using configured binary 'mysql' in '$BIN_MYSQL'..."
+   else
+      ERROR_REASONS+=("The binary 'mysql' has not been found!")
+      printError
+   fi
+fi
+if [[ -z $BIN_MYSQLDUMP ]];then
+   # No config set, lets try to find the binaries ourselves
+   BIN_MYSQLDUMP=`which mysqldump`
+   # Verify if the found binary is okey
+   if [[ -x $BIN_MYSQLDUMP && -f $BIN_MYSQLDUMP ]];then
+      [[ $DEBUG -eq 1 ]] && echo -e "Manually found 'mysqldump' in '$BIN_MYSQLDUMP'..."
+   else
+      ERROR_REASONS+=("The binary 'mysqldump' is invalid or has not been found!")
+      printError
+   fi
+else
+   # A binary location is given, lets check if the file exists
+   if [[ -x $BIN_MYSQLDUMP && -f $BIN_MYSQLDUMP ]];then
+      [[ $DEBUG -eq 1 ]] && echo -e "Using configured binary 'mysqldump' in '$BIN_MYSQLDUMP'..."
+   else
+     ERROR_REASONS+=("The binary 'mysqldump' has not been found!")
+     printError
+  fi
+fi
+
+# If no minimum free diskspace is given, defaults to 1 GB
+DISK_MIN_FREE=${DISK_MIN_FREE:-1}
+[[ $DEBUG -eq 1 ]] && echo -e "Minimum free diskspace is set to $DISK_MIN_FREE GB..."
+
+# Get terminal width
+[[ $DEBUG -eq 1 ]] && echo "Terminal type is set to '$TERM'..."
+
+# Fix pseudo terminals with fixed width
+if [ $TERM == dumb ];then
+   width=60
+else
+   # Get the terminal width and remove the width of the
+   # biggest word ( [ SKIPPED ])
+   ((width=$(tput cols)-12))
+fi
+
+# Fancy messages
+function printDebugStatus {
+   # Find the size of the ENGINE string
+
+  if [[ -z $3 ]]; then
+     printf "%-${width}s [ $1 ]\n" "$2"
+  else
+    engineSize=$((${#3}+3))
+     ((customWidth=$width-$engineSize))
+     printf "%-${customWidth}s ($3) [ $1 ]\n" "$2"
+  fi
+
+}
+
+# Allow command line variable imput in the form of:
+# DB_USER=root DB_PASS=letmein ./mysql-backup.sh
+[ ! -n $DB_USER ] && DB_USER=""
+[ ! -n $DB_PASS ] && DB_PASS=""
+
+# Check if the user is trying to login without a password. Note
+# that this will break the non-interactive shell!
+if [[ -n $DB_USER ]] && [[ -z $DB_PASS ]];then
+   [[ $DEBUG -eq 1 ]] && echo "The user '$DB_USER' has no password set in the configuration"
+   ERROR_REASONS+=("Password is not set! Not continuing as having no password for MySQL is a security risk!")
+   printError
+fi
+
+# Check if the user is a idiot
+if [[ ! -z $DB_USER ]] && [[ $DB_USER == $DB_PASS ]];then
+   ERROR_REASONS+=("MySQL Username and Password are identical. This is a security risk!")
+   printError
+fi
+
+# Validate the backup directory
+VALIDATEDIR=$(dirname ${LOCAL_BKP_DIR} 2>/dev/null)
+if [[ $? -eq 0 ]];then
+   if [ $VALIDATEDIR == "." ] || [ $VALIDATEDIR == "/" ];then
+      [[ $DEBUG -eq 1 ]] && [ $VALIDATEDIR == "/" ] && [ ! $LOCAL_BKP_DIR == "/" ] && echo "User trying to put the backup in a directory of /"
+      [[ $DEBUG -eq 1 ]] && [ $VALIDATEDIR == "/" ] && [ $LOCAL_BKP_DIR == "/" ] && echo "User trying to put the backup in the hosts root!"
+      [[ $DEBUG -eq 1 ]] && [ $VALIDATEDIR == "." ] && echo "Directory '$LOCAL_BKP_DIR' is invalid!"
+      ERROR_REASONS+=("Please specify at least one sub-directory to place the backup in!\n\tExample: /backup/mysql")
+      printError
+   fi
+else
+   [[ $DEBUG -eq 1 ]] && echo "Dump directory is not set!"
+   ERROR_REASONS+=("The MySQL dump directory is not valid")
+   printError
+fi
+
+# Check if there is at least $DISK_MIN_FREE free space on the
+# hosts/partition. We calculate in GB as MySQL dumps can grow
+# large. Besides, having at least 1 GB sounds like a pre!
+if [[ $(($(stat -f --format="%a*%S" .)/1024/1024/1024)) -lt $DISK_MIN_FREE ]];then
+   [[ $DEBUG -eq 1 ]] && echo "At least $DISK_MIN_FREE GB is needed. Currently there is only $(($(stat -f --format="%a*%S" .)/1024/1024/1024)) GB free!"
+   ERROR_REASONS+=("Insufficient disk space available...")
+   printError
+fi
+
+# Check if we need to remove a previous backup or not.
+# Note that it is best practice to keep the old backup around so you
+# can see how your backup is growing within trend-watchingtools. Also
+# the parameter $DISK_MIN_FREE will make more sence while it checks
+# increments instread of a wild guess :)
+if [[ $RM_OLDBACKUP -gt 0 ]];then
+   [[ $DEBUG -eq 1 ]] && echo -e "Removing old (previous) backup..."
+   if [[ -d $LOCAL_BKP_DIR ]];then
+      if [[ $DRY_RUN -eq 0 ]];then
+         # Validation of the backup directory has already been done at this point.
+         # Removing everything from the backup directory!
+         $BIN_RM -rf -- ${LOCAL_BKP_DIR}/*
+      else
+         [[ $DEBUG -eq 1 ]] && echo "Would have executed '$BIN_RM -rf -- $LOCAL_BKP_DIR/*' if dry-run parameter was missing..."
+      fi
+   else
+      [[ $DEBUG -eq 1 ]] && echo "Old backup has not been found. Probably the previous backup went wrong or this is a first run?"
+   fi
+fi
+
+# Show the current umask. Some backup tools change the default
+[[ $DEBUG -eq 1 ]] && echo "The current 'umask' is "`umask`"..."
+
+# Check if we have a custom umask in the configuration file
+if [[ ! -z $CUSTOM_UMASK ]];then
+   if [[ $CUSTOM_UMASK =~ ^-?[0-9]+$ ]];then
+      [[ $DEBUG -eq 1 ]] && echo -e "The 'umask' will be changed to ${CUSTOM_UMASK}..."
+      if [[ $DRY_RUN -eq 0 ]];then
+         # Change the umask only when a real backup is running
+         umask $CUSTOM_UMASK
+      fi
+   else
+      ERROR_REASONS+=("The 'umask' in the configuration file is incorrect, used default one...")
+   fi
+fi
+
+# Discover MySQL login type / method
+if [ ${#DB_USER} -gt 0 ]; then
+   LOGIN_OPTS="-u$DB_USER -p$DB_PASS"
+else
+   # Check if we have a Debian login method
+   if [ -f "/etc/mysql/root.cnf" ]; then
+      LOGIN_OPTS="--defaults-extra-file=/etc/mysql/root.cnf"
+   else
+      # Check if we have a DirectAdmin login method
+      if [ -f "/usr/local/directadmin/conf/my.cnf" ];then
+         LOGIN_OPTS="--defaults-extra-file=/usr/local/directadmin/conf/my.cnf"
+      else
+         ERROR_REASONS+=("No MySQL login method found and no credentials given, aborting...")
+         printError
+      fi
+   fi
+fi
+
+# Check if we need to backup remotely
+if [[ ! -z $DB_HOST ]] && [[ $DB_HOST != "localhost" ]];then
+   [[ $DEBUG -eq 1 ]] && echo "Using remote database '$DB_HOST' to gather backup..."
+   LOGIN_OPTS+=" --host ${DB_HOST}"
+fi
+
+DB_LIST=$((echo "show databases;"|$BIN_MYSQL $LOGIN_OPTS -N) 2>&1)
+
+# Check if we made correctly a connection
+if [[ $? -gt 0 ]];then
+   [[ $DEBUG -eq 1 ]] && echo -e "Wrong credentials of MySQL...\nTried to use credentials: $LOGIN_OPTS"
+   ERROR_REASONS+=("${DB_LIST}")
+   printError
+   exit 1
+fi
+
+# Check if we have enough MySQL rights to export everything
+[[ $DEBUG -eq 1 ]] && echo -e "Validating rights..."
+RIGHTS=$(($BIN_MYSQL $LOGIN_OPTS --skip-column-names -Be "show grants for current_user;" | grep -o -P '(?<=GRANT ).*(?= ON)') 2>&1)
+
+MISSING_RIGHTS="Missing grant (rights)"
+if [[ -z $DB_USER ]]; then
+   MISSING_RIGHTS+="!"
+else
+   MISSING_RIGHTS+=" for user '$DB_USER'!"
+fi
+
+if [[ ! "$RIGHTS" =~ "ALL PRIVILEGES" ]]; then
+   if [[ ! "$RIGHTS" =~ "SELECT" ]]; then
+      MISSING_RIGHTS+="\n     SELECT      - Probably NOT exporting all databases and tables!"
+      MISSING=1
+   fi
+
+   if [[ ! "$RIGHTS" =~ "LOCK TABLES" ]]; then
+      [[ $DEBUG -eq 1 ]] && MISSING_RIGHTS+="\n     LOCK TABLES - Probably problems with exporting some tables!"
+      MISSING=1
+   fi
+
+   if [[ ! "$RIGHTS" =~ "EVENT" ]]; then
+      [[ $DEBUG -eq 1 ]] && MISSING_RIGHTS+="\n     EVENT       - Probably problems with exporting some MySQL tables!"
+      MISSING=1
+   fi
+
+   [[ ! -z $MISSING ]] && WARNING_REASONS+=("${MISSING_RIGHTS}");
+
+   unset MISSING
+fi
+unset RIGHTS
+unset MISSING_RIGHTS
+
+# Just output the skipped databases and tables
+if [[ $DEBUG -eq 1 ]];then
+   if [ ${#SKIP_DATABASES[@]} -gt 0 ];then
+      echo -e "\nSkipping databases:"
+      for i in "${SKIP_DATABASES[@]}"
+      do
+         echo "  $i"
+      done
+   fi
+fi
+if [[ $DEBUG -eq 1 ]]; then
+   if [ ${#SKIP_TABLES[@]} -gt 0 ];then
+      echo -e "\nSkipping tables:"
+      for i in "${SKIP_TABLES[@]}"
+      do
+         echo "  $i"
+         done
+      fi
+fi
+
+[[ $DEBUG -eq 1 ]] && echo -e "\nStarting backup...\n"
+
+# Now create the backups
+while read -r DB; do
+   SKIP=0;
+   for i in "${SKIP_DATABASES[@]}"
+   do
+      if [[ $i == $DB ]];then
+         [[ $DEBUG -eq 1 ]] && printDebugStatus "SKIPPED" "$DB"
+         SKIP=1;
+      fi
+   done
+   if [[ $SKIP -eq 0 ]]; then
+      # Go ahead!
+
+      DB_BKP_DIR=$LOCAL_BKP_DIR/$DB
+
+      # Verify if we can make the directory
+      if [[ ! -d $DB_BKP_DIR ]]; then
+         if [[ $DRY_RUN -eq 0 ]];then
+            OUTPUT=$(($BIN_MKDIR -p "$DB_BKP_DIR") 2>&1)
+            if [[ $? -eq 1 ]]; then
+               [[ $DEBUG -eq 1 ]] && echo "Can not make directory '$DB_BKP_DIR'..."
+               ERROR_REASONS+=("${OUTPUT}")
+            fi
+         fi
+      fi
+
+      # Create the skip string for the structure dump
+      SKIPSTRING=()
+      for i in "${SKIP_TABLES[@]}"
+      do
+         # Check if we have a database that is identical to a skipped one.
+         if [[ ${i%%.*} == $DB ]];then
+            # Check if the table is identical to the one to be skipped
+            SKIPSTRING+=("--ignore-table=$i")
+         fi
+      done
+
+      # Get the tables and its type. Store it in an array.
+      # Using backticks around $DB for users who have dashes in there database / table names.
+
+      table_status="show table status from \`${DB}\`"
+      table_types=$(($BIN_MYSQL $LOGIN_OPTS --skip-column-names -Be "${table_status}" | awk -F "\t" '{print $1, $2}') 2>&1)
+
+      if [[ $? -eq 1 ]]; then
+         ERROR_REASONS+=("${table_types}")
+      fi
+
+      # Check if the database is empty
+      if [[ -z $table_types ]];then
+         [[ $DEBUG -eq 1 ]] && printDebugStatus "EMPTY" "$DB"
+      else
+         # Get the schema of database with the stored procedures.
+         # This will be the first file in the database backup folder
+         if [[ $DRY_RUN -eq 0 ]];then
+            OUTPUT=$(($BIN_MYSQLDUMP $LOGIN_OPTS --routines --no-data --triggers --single-transaction "${SKIPSTRING[@]}" "${DB}" | gzip -c > "$DB_BKP_DIR/000-DB_SCHEMA.sql.gz") 2>&1)
+
+            if [ $? -ne 0 ]; then
+               [[ $DEBUG -eq 1 ]] && printDebugStatus "FAILED" "$DB"
+               ERROR_REASONS+=("${OUTPUT}")
+            else
+               [[ $DEBUG -eq 1 ]] && printDebugStatus "OK" "$DB"
+            fi
+         else
+            printDebugStatus "DRY_RUN" "$DB"
+         fi
+      fi
+
+      while read -r row; do
+         table=${row% *}
+         type=${row##* }
+
+         DUMP_OPTS=("$DB")
+         DUMP_OPTS+=("--no-create-info")    # Do not write CREATE TABLES in the dump
+         DUMP_OPTS+=("--skip-triggers")     # Do not include triggers, we have them in the structure
+         DUMP_OPTS+=("--tables")
+
+         # Make sure events are stored correctly, so add the right mysqlbackup
+         # parameter when the mysql.event table is found.
+         [[ $DB == "mysql" && $table == "event" ]] && DUMP_OPTS+=("--events")
+
+         # MyISAM can't work with single-transactions, so exclude it
+         if [ ! "$type" = MyISAM ]; then
+            DUMP_OPTS+=("--single-transaction")
+         fi
+
+         # Lets check if its a table we need to skip
+         # Loop over our databases
+         for i in "${SKIP_TABLES[@]}"
+         do
+            # Check if we have a database that is identical to a skipped one.
+            if [[ ${i%%.*} == $DB ]] && [[ ${SKIP} == 0 ]];then
+               # Check if the table is identical to the one to be skipped
+               if [[ ${i#*.} == "$table" ]];then
+                  SKIP=1
+                  break
+               fi
+            else
+               SKIP=0
+            fi
+         done
+
+         if [[ $SKIP -eq 1 ]]; then
+            [[ $DEBUG -eq 1 ]] && printDebugStatus "SKIPPED" "  $table"
+         else
+            # Starting the backup of the table
+            if [[ ! -z $table_types ]];then
+               if [[ $DRY_RUN -eq 0 ]];then
+                  OUTPUT=$(($BIN_MYSQLDUMP $LOGIN_OPTS "${DUMP_OPTS[@]}" "${CUSTOM_OPTS[@]}" "$table" | gzip -c > "$DB_BKP_DIR/$table.sql.gz") 2>&1)
+
+                  if [ $? -ne 0 ]; then
+                     [[ $DEBUG -eq 1 ]] && printDebugStatus "FAILED" "  $table" $type
+                     ERROR_REASONS+=("${OUTPUT}")
+                  else
+                     [[ $DEBUG -eq 1 ]] && printDebugStatus "OK" "  $table" $type
+                  fi
+               else
+                  printDebugStatus "DRY_RUN" "  $table" $type
+               fi
+            fi
+         fi
+
+      done <<< "$table_types"
+   fi
+done <<< "$DB_LIST"
+
+if [[ $DRY_RUN -eq 0 ]];then
+   [[ $DEBUG -eq 1 ]] && echo -e "\nBackup script finished. Data stored in '$LOCAL_BKP_DIR'..."
+else
+   [[ $DEBUG -eq 1 ]] && echo -e "\nBackup script finished, but NOTHING is stored in '$LOCAL_BKP_DIR'..."
+fi
+{% endraw %}
+
+# delete old backups
+find {{ percona_backup.dir }} -maxdepth 1 -type d -mtime +{{ percona_backup.keepdays }} | xargs -I{} rm -rf {}
+
+# Create symlink to latest of newly created backup
+ln -sfn $LOCAL_BKP_DIR {{ percona_backup.dir }}latest
+
+echo "Mysql backup OK"
+# If there are errors, print it. If not, bye...
+printError

@@ -1,0 +1,54 @@
+---
+- name: arbiter | ensure garbd is installed
+  dnf:
+    name: percona-xtradb-cluster-garbd
+
+- name: arbiter | place gardb config in /etc/sysconfig/garbd
+  template:
+    src: arbitrator.conf.j2
+    dest: /etc/sysconfig/garb
+    owner: root
+    group: root
+    mode: '0644'
+  register: arb_conf
+  tags:
+    - molecule-idempotence-notest
+
+- name: arbiter | check whether garbd log exists
+  stat:
+    path: /var/log/garbd.log
+  register: garbd_check
+
+- name: arbiter | touch log file
+  file:
+    path: /var/log/garbd.log
+    state: touch
+    owner: root
+    group: root
+    mode: '0774'
+  when: not garbd_check.stat.exists
+
+- name: arbiter | ensure root user is set in service file
+  lineinfile:
+    path: /usr/lib/systemd/system/garb.service
+    regexp: "^User="
+    line: "User=root"
+  register: config_garbd
+
+- name: arbiter | reload deamons when garbd service file changed
+  systemd:
+    daemon_reload: true
+  when: config_garbd.changed
+
+- name: arbiter | ensure garbd service is started
+  systemd:
+    name: garb
+    state: started
+
+- name: arbiter | restart garbd service when config changed
+  systemd:
+    name: garb
+    state: restarted
+  when: arb_conf.changed
+  tags:
+    - molecule-idempotence-notest

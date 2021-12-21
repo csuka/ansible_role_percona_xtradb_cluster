@@ -1,0 +1,74 @@
+---
+- name: install | ensure mysql group is set
+  group:
+    name: mysql
+    gid: 27
+    system: true
+
+- name: install | ensure mysql user is set
+  user:
+    name: mysql
+    uid: 27
+    system: true
+    group: mysql
+    comment: 'MySQL Server'
+    home: /var/lib/mysql
+    create_home: false
+    shell: /sbin/nologin
+
+- name: install | ensure mysql and certs folder exists
+  file:
+    state: directory
+    path: "{{ item }}"
+    owner: mysql
+    group: mysql
+    mode: '0755'
+  loop:
+    - /etc/mysql
+    - /etc/mysql/certs
+
+- name: install | percona when not installed
+  block:
+
+    - name: install | dependencies
+      dnf:
+        name: "{{ percona_package_deps }}"
+        update_cache: true
+
+    - name: install | pymysql via pip3
+      pip:
+        executable: pip3
+        name: pymysql
+
+    - name: install | import RPM GPG key
+      rpm_key:
+        key: https://www.percona.com/downloads/RPM-GPG-KEY-percona
+
+    - name: install | set repo
+      yum:
+        name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+
+    - name: install | enable pxc 80 repo
+      shell: percona-release setup pxc80 -y
+      when: not arbiter_installed
+
+    - name: install | percona xtradb cluster
+      dnf:
+        name: percona-xtradb-cluster
+      when: not arbiter
+
+    - name: install | set open file limit in service file
+      lineinfile:
+        path: /usr/lib/systemd/system/mysql.service
+        regexp: '^LimitNOFILE='
+        line: "LimitNOFILE={{ mysqld.open_files_limit }}"
+      when: not arbiter
+
+    - name: install | reload daemons, because a service file changed
+      systemd:
+        daemon_reload: true
+      when: not arbiter
+
+  when:
+    - installed is defined and not installed
+    - arbiter_installed is defined and not arbiter_installed

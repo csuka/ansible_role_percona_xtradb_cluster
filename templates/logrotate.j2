@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+
+/var/log/mysql/*.log {
+        # create 600 mysql mysql
+        notifempty
+        daily
+        rotate {{ percona_logrotate.rotate }}
+        missingok
+        sharedscripts
+        compress
+    postrotate
+        # only execute if mysqld is responding
+        env HOME=/root/
+        if test -x /usr/bin/mysqladmin && \
+           /usr/bin/mysqladmin ping &>/dev/null
+        then
+           /usr/bin/mysqladmin --local flush-error-log \
+                    flush-engine-log flush-general-log flush-slow-log
+        fi
+    endscript
+}

@@ -1,0 +1,127 @@
+# {{ ansible_managed }}
+
+[client]
+socket                     = {{ mysqld.socket }}
+
+[mysqld]
+user                       = mysql
+port                       = {{ mysqld.port }}
+bind-address               = {{ mysqld.bind_address }}
+socket                     = {{ mysqld.socket }}
+pid-file                   = {{ mysqld.pid }}
+
+basedir                    = {{ mysqld.basedir }}
+datadir                    = {{ mysqld.datadir }}
+tmpdir                     = {{ mysqld.tmpdir }}
+
+default_storage_engine     = {{ mysqld.default_storage_engine }}
+skip-name-resolve
+sql_mode                   = {{ mysqld.sql_mode }}
+
+# logging
+log_error                  = {{ mysqld.error_log }}
+slow_query_log_file        = {{ mysqld.slow_log }}
+slow_query_log             = 1
+long_query_time            = {{ mysqld.slow_query_time }}
+log_slow_verbosity         = {{ mysqld.slow_log_verbosity }}
+
+{% if percona_cluster.enabled %}
+# replication settings
+server-id                 = {{ percona_cluster.server_id }}
+{% endif %}
+{% if percona_cluster.role == 'master' %}
+log_bin                   = mysql-bin
+log-bin-index             = mysql-bin.index
+binlog_expire_logs_seconds= {{ percona_expire_logs_seconds }}
+max_binlog_size           = {{ percona_max_binlog_size }}
+binlog_format             = {{ mysqld.binlog_format}}
+innodb_autoinc_lock_mode  = {{ mysqld.innodb.autoinc_lock_mode }}
+{% endif %}
+
+# {% if percona_cluster.role == 'slave' %}
+# read_only
+# relay-log                 = relay-bin
+# relay-log-index           = relay-bin.index
+# {% endif %}
+
+# memory settings
+key_buffer_size           = {{ mysqld.key_buffer_size }}
+max_allowed_packet        = {{ mysqld.max_allowed_packet }}
+table_open_cache          = {{ mysqld.table_open_cache }}
+table_open_cache_instances = {{ mysqld.table_open_cache_instances }}
+table_definition_cache    = {{ mysqld.table_definition_cache }}
+sort_buffer_size          = {{ mysqld.sort_buffer_size }}
+read_buffer_size          = {{ mysqld.read_buffer_size }}
+read_rnd_buffer_size      = {{ mysqld.read_rnd_buffer_size }}
+myisam_sort_buffer_size   = {{ mysqld.myisam_sort_buffer_size }}
+myisam-recover-options    = {{ mysqld.myisam_recover_options }}
+thread_cache_size         = {{ mysqld.thread_cache_size }}
+thread_stack              = {{ mysqld.thread_stack }}
+max_connections           = {{ mysqld.max_connections }}
+tmp_table_size            = {{ mysqld.tmp_table_size }}
+max_connections           = {{ mysqld.max_connections }}
+max_user_connections      = {{ mysqld.max_user_connections }}
+max_heap_table_size       = {{ mysqld.max_heap_table_size }}
+wait_timeout              = {{ mysqld.wait_timeout }}
+interactive_timeout       = {{ mysqld.interactive_timeout }}
+net_write_timeout         = {{ mysqld.net_write_timeout }}
+net_read_timeout          = {{ mysqld.net_read_timeout }}
+open_files_limit          = {{ mysqld.open_files_limit }}
+back_log                  = {{ mysqld.back_log }}
+
+wait_timeout              = {{ mysqld.wait_timeout }}
+lower_case_table_names    = {{ mysqld.lower_case_table_names }}
+
+# enable smiley charset
+init_connect                    = 'SET NAMES {{ mysqld.default.charset }} COLLATE {{ mysqld.default.collate }}'
+character-set-server            = {{ mysqld.default.charset }}
+collation-server                = {{ mysqld.default.collate }}
+skip-character-set-client-handshake
+
+# InnoDB settings
+innodb_dedicated_server         = {{ mysqld.innodb.dedicated_server }}
+
+innodb_file_per_table           = {{ mysqld.innodb.file_per_table }}
+innodb_temp_data_file_path      = {{ mysqld.innodb.temp_data_file_path }}
+innodb_buffer_pool_chunk_size   = {{ mysqld.innodb.buffer_pool_chunk_size }}
+innodb_log_buffer_size          = {{ mysqld.innodb.log_buffer_size }}
+innodb_adaptive_hash_index      = {{ mysqld.innodb.adaptive_hash_index }}
+innodb_adaptive_hash_index_parts= {{ mysqld.innodb.adaptive_hash_index_parts }}
+innodb_lru_scan_depth           = {{ mysqld.innodb.lru_scan_depth }}
+innodb_read_io_threads          = {{ mysqld.innodb.read_io_threads }}
+innodb_write_io_threads         = {{ mysqld.innodb.write_io_threads }}
+thread_pool_size                = {{ mysqld.thread_pool_size }}
+
+{% if percona_ssl %}
+[percona]
+ssl_capath                      = /etc/mysql/certs/
+wsrep_provider_options="socket.ssl_cert=/etc/mysql/certs/server-cert.pem;socket.ssl_key=/etc/mysql/certs/server-key.pem;socket.ssl_ca=/etc/mysql/certs/ca.pem"
+
+[sst]
+# enabled 4 uses encryption
+enabled                         = 4
+ssl_capath                      = /etc/mysql/certs/
+{% endif %}
+{% if not percona_ssl %}
+pxc-encrypt-cluster-traffic     = OFF
+{% endif %}
+
+[mysqldump]
+quick
+max_allowed_packet              = {{ mysqld.mysqldump_max_allowed_packet }}
+
+[mysqld_safe]
+pid-file                        = {{ mysqld.pid }}
+
+# user defined section, keys and values. When nothing is defined, it is empty
+{% for section_name, section_contents in percona_custom_cnf.items() %}
+[{{ section_name }}]
+{% for key, value in section_contents.items() %}
+{% if value is defined and value %}
+{{ key }}                 = {{ value }}
+{% else %}
+{{ key }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+# end of user defined section
