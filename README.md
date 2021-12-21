@@ -12,7 +12,7 @@ This is for either for a single node, or when using 2 nodes or more. The functio
 Main functionalities
 --------------------
 
-This role is tested on Ansible 2.9 and higher. This role has the following functionalities:
+This role is tested on Ansible 2.9 and higher. It includes:
 
  * Percona XtraDB Cluster 8
  * Secured connection by encrypting mysql traffic
