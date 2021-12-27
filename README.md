@@ -1,34 +1,3 @@
-Percona XtraDB Cluster 8
-========================
-
-This role installs and configures Percona XtraDB cluster 8 on EL 8, and is idempotent.
-This is for either for a single node, or when using 2 nodes or more. The functionality to add an arbiter is included as well.
-
-**Please read this file carefully before deploying this Ansible role**
-
-
-Main functionalities
---------------------
-
-This role is tested on Ansible 2.9 and higher. It includes:
-
- * Percona XtraDB Cluster 8
- * Secured connection by encrypting mysql traffic
- * Bootstrapping a cluster, including application tests
- * Scaling: add or remove hosts from the cluster **with ease**!
- * Arbiter possibility
- * Adds backup scripts
- * Automatically calculates the recommended mysql configuration settings, based on resources
- * Logrotation
- * Add user defined users
- * Add user defined databases
-
-Requirements
-------------
-
- * Brain
- * EL 8
- * At least 2G of RAM is recommended, 512MB for the arbiter is sufficient
  * When clustering, the nodes are able to connect to each other via ports 4444, 4567, 4568, see [info](https://www.percona.com/doc/percona-xtradb-cluster/LATEST/faq.html#what-tcp-ports-are-used-by-percona-xtradb-cluster)
  * Plenty of disk space, keep the backup in mind as well. The use of an SSD is preferred for performance
  * Internet connection to download installation files
@@ -179,7 +148,7 @@ These databases are skipped when creating a backup:
 
 The backups are stored with a timestamp of that day. A symlink is created to `latest`.
 
-restarting mysql
+Restarting mysql
 ----------------
 
 The role is setup in an idempotent fashion.
@@ -263,7 +232,7 @@ Single host:
     - host1
   become: True
   roles:
-    - percona-xtradb-cluster-80
+    - percona_xtradb_cluster
 ```
 
 A cluster, or scaling from a single node to a cluster:
@@ -277,7 +246,7 @@ A cluster, or scaling from a single node to a cluster:
   any_errors_fatal: true
   become: True
   roles:
-    - percona-xtradb-cluster-80
+    - percona_xtradb_cluster
 ```
 
 A cluster, scaling to more hosts:
@@ -292,7 +261,7 @@ A cluster, scaling to more hosts:
   any_errors_fatal: true
   become: True
   roles:
-    - percona-xtradb-cluster-80
+    - percona_xtradb_cluster
 ```
 
 PMM client
