@@ -24,6 +24,7 @@
   when: "'wsrep_protocol_version' not in cluster_state.stdout"
 
 - block:
+
     - name: cluster_scale | create dict of cluster_status
       set_fact:
         status: "{{ dict(keys|zip(values)) }}"
@@ -46,6 +47,7 @@
   run_once: true
 
 - block:
+
     - name: cluster_scale | ensure galera.cnf is set
       template:
         src: galera.cnf.j2
@@ -68,6 +70,7 @@
     - not arbiter
 
 - block:
+
     - name: cluster_scale | set fact for arbiter
       set_fact:
         cluster_host_which_is_skipped: "{{ inventory_hostname }}"

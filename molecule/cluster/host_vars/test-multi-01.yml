@@ -7,8 +7,6 @@ percona_cluster:
   server_id: '11'
   ip_address: "{{ ansible_default_ipv4.address }}"
 
-cust_pwd: /root/cust
-
 percona_databases:
   - my_db
   - another_db

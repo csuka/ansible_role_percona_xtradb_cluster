@@ -2,7 +2,6 @@
 percona_root_password: 'something'
 percona_system_password: 'something'
 percona_sst_password: 'something'
-cust_pwd: /root/cust
 
 percona_databases:
   - my_db
