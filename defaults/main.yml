@@ -15,6 +15,7 @@ percona_system_password: 'change_me'
 percona_sst_password: 'change_me'
 
 percona_ssl: true
+# directory to place all keys/certs temporary on the controller node
 percona_certs_tmp_dir: /tmp
 percona_certs:
   - ca

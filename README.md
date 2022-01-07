@@ -38,10 +38,14 @@ A 2 node galera cluster is a fundamentally broken design, as it cannot maintain 
 
 By default, the [communication is encrypted](https://www.percona.com/doc/percona-xtradb-cluster/8.0/security/encrypt-traffic.html). As a best practice, the certificates are placed in `/etc/mysql/certs` with proper permissions. The certs in `/var/lib/mysql` are symlinked to `/etc/mysql/certs`.
 
-You should make a choice whether to use encrypted traffic or not. It isn't a good idea to switch after deployment.
+You should make a choice whether to use encrypted traffic or not before deploying this role. This role is not capable of switching from a 'disabled' certificate state to an enabled state.
+
+On creation, the keys/certificates will be fetched from a single host to the controller node.
+Then, they the files are copied to each host and removed from the controller node.
 
 ```yaml
-percona_ssl: false
+percona_ssl: true
+percona_certs_tmp_dir: /tmp
 ```
 
 There must only be one bootstrapper, as this is important, I've created assertions for this matter. An arbiter can also be added, see below.
