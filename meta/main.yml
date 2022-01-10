@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: Kevin Csuka
-  description: This role install, configures, clusters and manages Percona XtraDB Cluster 8 for EL 8
+  description: A role to install, configure and cluster Percona XtraDB Cluster 8
   namespace: kcsuka
   role_name: percona_xtradb_cluster
   license: Apache License, Version 2.0
