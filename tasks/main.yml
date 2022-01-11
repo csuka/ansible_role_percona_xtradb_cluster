@@ -20,6 +20,7 @@
   when: not arbiter
 
 - include_tasks: certs.yml
+  when: host_count != 1
   tags: certs
 
 - include_tasks: config.yml

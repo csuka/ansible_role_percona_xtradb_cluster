@@ -46,9 +46,10 @@
 
   run_once: true
 
-- name: cluster | cluster when not clustered
-  block:
+- block:
+
     - block:
+
         - name: cluster | ensure mysql is stopped
           systemd:
             name: mysql

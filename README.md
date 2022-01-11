@@ -1,3 +1,30 @@
+# Percona XtraDB Cluster 8
+
+An Ansible role that installs, configures and manages Percona XtraDB cluster 8 for EL 8.
+This is for either for a single node, or when using 2 nodes or more. The functionality to add an arbiter is included as well.
+
+**Please read this file carefully before deploying this Ansible role**
+
+## Main functionalities
+
+This role is tested with Ansible v2.9. and 2.10, it includes:
+
+ * Percona XtraDB Cluster 8
+ * Secured connection by encrypting mysql traffic
+ * Bootstrapping a cluster, including application tests
+ * Scaling: add or remove hosts from the cluster **with ease**!
+ * Arbiter possibility
+ * Adds backup scripts
+ * Automatically calculates the recommended mysql configuration settings, based on resources
+ * Logrotation
+ * Add user defined users
+ * Add user defined databases
+
+## Requirements
+
+ * Brain
+ * EL 8
+ * At least 2G of RAM is recommended, 512MB for the arbiter is sufficient
  * When clustering, the nodes are able to connect to each other via ports 4444, 4567, 4568, see [info](https://www.percona.com/doc/percona-xtradb-cluster/LATEST/faq.html#what-tcp-ports-are-used-by-percona-xtradb-cluster)
  * Plenty of disk space, keep the backup in mind as well. The use of an SSD is preferred for performance
  * Internet connection to download installation files
@@ -6,8 +33,7 @@ Copy the variables from `default/main.yml` and adjust them for each node in it's
 
 The arbiter requires less configuration, see below.
 
-Installation
-------------
+## Installation
 
 See `defaults/main.yml` for the variables which can be set.
 
@@ -30,8 +56,7 @@ percona_sst_password: 'something'
 
 Note that a config test is executed before starting mysql.
 
-Clustering
-----------
+## Clustering
 
 When there are at least 2 nodes in the play, a multi-master cluster is possible.
 A 2 node galera cluster is a fundamentally broken design, as it cannot maintain uptime without a quorum and the ability of a node to go down to aid recovery. Take this into account when designing the cluster.
@@ -72,8 +97,7 @@ percona_cluster:
   ip_address: '10.0.0.112'
 ```
 
-Arbiter
--------
+## Arbiter
 
 An arbiter can be included in the cluster, these are the required values for the arbiter, change accordingly:
 
@@ -94,8 +118,7 @@ percona_cluster:
 
 The arbiter also has encrypted traffic, since it makes use of the same certs.
 
-Scaling
--------
+## Scaling
 
 When a host is added, and the vars are added to the new host, the cluster auto scales automagicly. This can be done from a single to node, to a cluster.
 
@@ -109,14 +132,13 @@ If no restart is desired, set this in the `group_vars/all.yml`
 percona_cluster_scale_restart_all: false
 ```
 
-Login
+## Login
 -----
 
 By default, the user debian-sys-maint is created, with root privileges.
 The credentials are set in `/etc/mysql/root.cnf` and is symlinked to `/root/.my.cnf`
 
-Backup
-------
+## Backup
 
 The backup script is by default placed in `/etc/mysql/backup.sh`. It uses cron to perform a backup, so crontabs is installed, which is most likely installed by default.
 
@@ -152,8 +174,7 @@ These databases are skipped when creating a backup:
 
 The backups are stored with a timestamp of that day. A symlink is created to `latest`.
 
-Restarting mysql
-----------------
+## Restarting mysql
 
 The role is setup in an idempotent fashion.
 
@@ -169,8 +190,7 @@ If this restaring mysql after a config change is undesired, set:
 percona_ansible_managed: false
 ```
 
-Logrotation
------------
+## Logrotation
 
 There are 2 mysql logs files, placed in /var/log/mysql.
 
@@ -180,8 +200,7 @@ There are 2 mysql logs files, placed in /var/log/mysql.
 There is a logratation config placed in `/etc/logrotate.d/`, which is run once a day.
 See `templates/logrotate.j2` for the config file.
 
-Databases and users
--------------------
+## Databases and users
 
 Append your own databases and users, set in `group_vars/all.yml`:
 
@@ -199,8 +218,7 @@ percona_users:
     host: localhost
 ```
 
-mysql values
-------------
+## mysql values
 
 See `defaults/main.yml`. As stated before, copy all values to a host_vars file, and edit values where applicable.
 
@@ -223,8 +241,7 @@ general-log
 log-output = file
 ```
 
-Example playbook
-----------------
+## Example playbook
 
 As stated earlier, ensure to set the required variables in the host_vars of each host.
 
@@ -268,8 +285,7 @@ A cluster, scaling to more hosts:
     - percona_xtradb_cluster
 ```
 
-PMM client
-----------
+## PMM client
 
 It's possible to install the PMM2 client. It will monitor the slow-query, as [this is recommended](https://www.percona.com/doc/percona-monitoring-and-management/conf-mysql.html#id1).
 
@@ -288,8 +304,7 @@ percona_pmm:
 
 The `(db_pass|db_user)` are created on the mysql database.
 
-Molecule
---------
+## Molecule
 
 There are 2 tests configured with Molecule:
 

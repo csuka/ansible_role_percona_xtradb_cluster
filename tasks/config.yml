@@ -1,5 +1,6 @@
 ---
 - block:
+
     - name: config | set config files
       template:
         src: "{{ item.src }}"

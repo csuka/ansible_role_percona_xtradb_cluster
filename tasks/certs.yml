@@ -4,18 +4,35 @@
     path: /etc/mysql/certs/ca.pem
   register: ca_check
 
-- name: certs | ensure fact is empty
+- name: certs | set fact
   set_fact:
-    host_certs: ""
-
-- name: certs | set fact to copy certs from a host
-  set_fact:
-    host_certs: "{{ item }}"
-  when: host_count == '1' or hostvars[item].percona_cluster.bootstrapper
-  run_once: true
-  loop: "{{ ansible_play_hosts }}"
+    ca_check: "{{ ca_check.stat.exists }}"
 
 - block:
+
+    - name: certs | create dict of certificate check
+      set_fact:
+        ca_status: "{{ dict(keys|zip(values)) }}"
+      vars:
+        keys: "{{ ansible_play_hosts }}"
+        values: "{{ ansible_play_hosts |
+                    map('extract', hostvars, ['ca_check'])
+                    | list }}"
+
+    - name: certs | set fact when a host does not has the files
+      set_fact:
+        ca_all: false
+      when: ca_status.values() | list is not all
+
+    - name: certs | set fact when all hosts has the files
+      set_fact:
+        ca_all: true
+      when: ca_status.values() | list is all
+
+  run_once: true
+
+- name: certs | share the certs among hosts if one does not has the certs
+  block:
 
     - name: certs | fetch all required files to localhost
       fetch:
@@ -23,9 +40,9 @@
         flat: true
         dest: "{{ percona_certs_tmp_dir }}/"
       loop: "{{ percona_certs }}"
-      delegate_to: "{{ host_certs }}"
+      delegate_to: bootstrapper
 
-    - name: certs | copy all files
+    - name: certs | copy required files to remaining hosts
       copy:
         src: "{{ percona_certs_tmp_dir }}/{{ item }}.pem"
         dest: "/etc/mysql/certs/{{ item }}.pem"
@@ -49,7 +66,7 @@
       loop: "{{ percona_certs }}"
       when: not arbiter
 
-  when: not ca_check.stat.exists
+  when: not ca_check or not ca_all
 
 - name: certs | ensure files are deleted from localhost
   file:

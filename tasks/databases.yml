@@ -19,29 +19,3 @@
     state: present
   loop: "{{ percona_databases }}"
   when: inventory_hostname == host_on_dbs or host_count == '1'
-  # register: db_creation
-
-# - name: databases | copy database init scripts
-#   template:
-#     src: "{{ item.item.init_script }}"
-#     dest: "/tmp/{{ item.item.init_script | basename }}"
-#     mode: '0600'
-#   loop: "{{ db_creation.results }}"
-#   when: item.changed and item.item.init_script is defined
-#
-# - name: databases | initialise databases
-#   mysql_db:
-#     login_host: ''
-#     login_unix_socket: /var/run/mysqld/mysqld.sock
-#     name: "{{ item.item.name }}"
-#     state: import
-#     target: "/tmp/{{ item.item.init_script | basename }}"
-#   loop: "{{ db_creation.results }}"
-#   when: item.changed and item.item.init_script is defined
-#
-# - name: databases | delete init scripts
-#   file:
-#     name: "/tmp/{{ item.item.init_script | basename }}"
-#     state: absent
-#   loop: "{{ db_creation.results }}"
-#   when: item.changed and item.item.init_script is defined
