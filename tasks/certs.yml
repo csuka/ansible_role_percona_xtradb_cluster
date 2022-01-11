@@ -24,7 +24,7 @@
         ca_all: false
       when: ca_status.values() | list is not all
 
-    - name: certs | set fact when all hosts has the files
+    - name: certs | set fact when all hosts have the files
       set_fact:
         ca_all: true
       when: ca_status.values() | list is all
@@ -56,7 +56,9 @@
         state: absent
         path: "/var/lib/mysql/{{ item }}.pem"
       loop: "{{ percona_certs }}"
-      when: not arbiter
+      when:
+        - not arbiter
+        - not ca_check
 
     - name: certs | ensure files are symlinked
       file:
@@ -64,7 +66,9 @@
         src: "/etc/mysql/certs/{{ item }}.pem"
         dest: "/var/lib/mysql/{{ item }}.pem"
       loop: "{{ percona_certs }}"
-      when: not arbiter
+      when:
+        - not arbiter
+        - not ca_check
 
   when: not ca_check or not ca_all
 
