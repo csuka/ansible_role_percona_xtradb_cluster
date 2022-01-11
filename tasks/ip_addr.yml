@@ -1,7 +1,7 @@
 ---
 - name: ip addr | set fact for all ip addressess
   set_fact:
-    all_ips: |
+    all_ips: >-
       {{ ansible_play_hosts |
       map('extract', hostvars, ['percona_cluster', 'ip_address'] ) |
       join(',') }}

@@ -1,4 +1,11 @@
 ---
+- name: certs | set fact to copy certs from a host
+  set_fact:
+    host_certs: "{{ item }}"
+  when: hostvars[item].percona_cluster.bootstrapper
+  run_once: true
+  loop: "{{ ansible_play_hosts }}"
+
 - name: certs | stat ca.pem
   stat:
     path: /etc/mysql/certs/ca.pem
@@ -40,7 +47,7 @@
         flat: true
         dest: "{{ percona_certs_tmp_dir }}/"
       loop: "{{ percona_certs }}"
-      delegate_to: bootstrapper
+      delegate_to: "{{ host_certs }}"
 
     - name: certs | copy required files to remaining hosts
       copy:
