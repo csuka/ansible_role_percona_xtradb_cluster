@@ -44,7 +44,7 @@
     bootstrapper: true
   when: percona_cluster.bootstrapper
 
-- name: assert | set fact for not bootsrappers
+- name: assert | set fact for not bootstrapper
   set_fact:
     bootstrapper: false
   when: not percona_cluster.bootstrapper
