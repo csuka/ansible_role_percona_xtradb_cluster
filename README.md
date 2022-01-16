@@ -11,19 +11,18 @@ This role is tested with Ansible v2.9. and 2.10, it includes:
 
  * Percona XtraDB Cluster 8
  * Secured connection by encrypting mysql traffic
- * Bootstrapping a cluster, including application tests
+ * Bootstrapping a cluster, includes end2end testing
  * Scaling: add or remove hosts from the cluster **with ease**!
  * Arbiter possibility
- * Adds backup scripts
+ * Adding a beautiful backup script
  * Automatically calculates the recommended mysql configuration settings, based on resources
- * Logrotation
- * Add user defined users
- * Add user defined databases
+ * Logrotation configuration
+ * Adding user defined users
+ * Adding user defined databases
 
 ## Requirements
 
  * Brain
- * EL 8
  * At least 2G of RAM is recommended, 512MB for the arbiter is sufficient
  * When clustering, the nodes are able to connect to each other via ports 4444, 4567, 4568, see [info](https://www.percona.com/doc/percona-xtradb-cluster/LATEST/faq.html#what-tcp-ports-are-used-by-percona-xtradb-cluster)
  * Plenty of disk space, keep the backup in mind as well. The use of an SSD is preferred for performance
