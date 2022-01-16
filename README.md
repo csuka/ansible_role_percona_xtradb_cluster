@@ -96,7 +96,7 @@ percona_cluster:
   ip_address: '10.0.0.112'
 ```
 
-## Arbiter
+### Arbiter
 
 An arbiter can be included in the cluster, these are the required values for the arbiter, change accordingly:
 
