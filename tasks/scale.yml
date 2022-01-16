@@ -1,0 +1,126 @@
+---
+- name: scale | check if already clustered
+  shell: mysql -e "show status like 'wsrep%';"
+  changed_when: false
+  register: cluster_state
+  when: not arbiter
+
+- name: scale | set fact for arbiter
+  set_fact:
+    cluster_state:
+      stdout: wsrep_protocol_version
+  when: arbiter
+
+- name: scale | set fact when in cluster state
+  set_fact:
+    cluster_status: true
+  when:
+    - "'wsrep_protocol_version' in cluster_state.stdout"
+    - cluster_state is defined
+
+- name: scale | set fact when not in cluster state
+  set_fact:
+    cluster_status: false
+  when: "'wsrep_protocol_version' not in cluster_state.stdout"
+
+- block:
+
+    - name: scale | create dict of cluster_status
+      set_fact:
+        status: "{{ dict(keys|zip(values)) }}"
+      vars:
+        keys: "{{ ansible_play_hosts }}"
+        values: "{{ ansible_play_hosts|
+                    map('extract', hostvars, ['cluster_status'])
+                    | list }}"
+
+    - name: scale | set fact when at least one host if false
+      set_fact:
+        cluster_scale: true
+      when: "'False' in status | string"
+
+    - name: set fact when all hosts are clustered
+      set_fact:
+        cluster_scale: false
+      when: status.values() | list is all
+
+  run_once: true
+
+- block:
+
+    - name: scale | ensure galera.cnf is set
+      template:
+        src: galera.cnf.j2
+        dest: /etc/mysql/galera.cnf
+        owner: root
+        group: root
+        mode: '0664'
+
+    - name: scale | remove innodb_log_files on new host
+      file:
+        path: "{{ item.name }}"
+        state: absent
+      when: not cluster_status
+      loop:
+        - {name: '/var/lib/mysql/ib_logfile0'}
+        - {name: '/var/lib/mysql/ib_logfile1'}
+
+  when:
+    - cluster_scale
+    - not arbiter
+
+- block:
+
+    - name: scale | set fact for arbiter
+      set_fact:
+        cluster_host_which_is_skipped: "{{ inventory_hostname }}"
+      when: arbiter
+
+    - name: scale | set fact for arbiter
+      set_fact:
+        cluster_host_which_is_skipped: nope
+      when: not arbiter
+
+    # restart mysql, then verify if we can show databases
+    # if that fails, the play is stopped
+    - name: scale | restart mysql service one by one
+      shell: >
+        systemctl restart mysql ; mysql -e 'show databases;' &&
+        sleep {{ percona_restart_time }}
+      run_once: true
+      delegate_to: "{{ item }}"
+      loop: "{{ ansible_play_hosts }}"
+      args:
+        warn: false
+      when:
+        - item != cluster_host_which_is_skipped
+        - cluster_result is undefined or cluster_result is not failed
+        - (installed is defined and installed) or
+          (arbiter_installed is defined and arbiter_installed)
+      register: cluster_result
+
+    - meta: end_play
+      when: cluster_result is failed
+
+    - name: scale | verify if wsrep is successful on added hosts
+      shell: >
+        mysql -e "show status like 'wsrep%';" |
+        grep wsrep_local_state_comment
+      register: wsrep_check_one
+      when:
+        - not arbiter
+        - cluster_scale
+        - not cluster_status
+
+    - name: scale | fail if not Synced
+      fail:
+        msg: "Bootstrapping has failed. Please check the logs, and fix"
+      when:
+        - not arbiter
+        - cluster_scale
+        - not cluster_status
+        - '"Synced" not in wsrep_check_one.stdout'
+
+  when:
+    - cluster_scale
+    - percona_cluster_scale_restart_all

@@ -1,0 +1,41 @@
+---
+- name: ip addr | set fact for all ip addressess
+  set_fact:
+    all_ips: >-
+      {{ ansible_play_hosts |
+      map('extract', hostvars, ['percona_cluster', 'ip_address'] ) |
+      join(',') }}
+
+- name: ip addr | convert all ip addressess fact to a list
+  set_fact:
+    all_ip_list: "{{ all_ips.split(',') }}"
+
+- name: ip addr | lookup arbiter ip and set fact to list
+  set_fact:
+    arbiter_ip: "{{ item.value.split() }}"
+  loop: "{{ lookup('dict', percona_cluster) }}"
+  when:
+    - "'ip_address' in item.key"
+    - arbiter
+
+- name: ip addr | difference the two lists on the arbiter
+  set_fact:
+    ip_without_arbiter: "{{ all_ip_list | difference(arbiter_ip) }}"
+  when: arbiter
+
+- name: ip addr | set fact for dynamic host variable sharing
+  set_fact:
+    run_on: "{{ item }}"
+  with_items: "{{ inventory_hostname }}"
+  when: run_on is undefined and hostvars[item].arbiter
+  run_once: true
+
+- name: ip addr | ensure all hosts have the same var when arbiter is present
+  set_fact:
+    ip_without_arbiter: "{{ hostvars[run_on]['ip_without_arbiter'] }}"
+  when: run_on is defined
+
+- name: ip addr | ensure all hosts have the same variable when arbiter is absent
+  set_fact:
+    ip_without_arbiter: "{{ all_ips.split(',') }}"
+  when: run_on is undefined

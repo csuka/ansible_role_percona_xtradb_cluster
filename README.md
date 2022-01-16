@@ -120,9 +120,9 @@ The arbiter also has encrypted traffic, since it makes use of the same certs.
 
 ## Scaling
 
-When a host is added, and the vars are added to the new host, the cluster auto scales automagicly. This can be done from a single to node, to a cluster.
+When a host is added to the play, and the vars are added to the new host, the cluster auto scales automagicly. This can be done from a single host to a cluster.
 
-Or from a cluster, to a cluster +1. ["Do not join several nodes at the same time to avoid overhead due to large amounts of traffic when a new node joins."](https://www.percona.com/doc/percona-xtradb-cluster/LATEST/add-node.html)
+Or from a cluster, to a cluster + 1. ["Do not join several nodes at the same time to avoid overhead due to large amounts of traffic when a new node joins."](https://www.percona.com/doc/percona-xtradb-cluster/LATEST/add-node.html)
 
 The role will, by default, also restart all mysql instances, with a 10s delay between the restarts. See section `systemctl restart mysql` below.
 
@@ -182,9 +182,9 @@ Besides the first run, when the role is executed for another run, and a config f
 
 In this case, the mysql service is restarted per host, with a 10s pause in between. This is to prevent all the nodes shutting down at the same time, and losing the cluster.
 
-If mysql fails to start on one node, the role aborts!
+If mysql fails to start on one node, the role aborts, to maintain the cluster!
 
-If this restaring mysql after a config change is undesired, set:
+If restarting mysql after a config change is undesired, set:
 
 ```yaml
 percona_ansible_managed: false
@@ -195,7 +195,7 @@ percona_ansible_managed: false
 There are 2 mysql logs files, placed in /var/log/mysql.
 
  * Error log, named error.log
- * Slow log, mysql-slow.log, by default logs queries longer than 3s.
+ * Slow log, named mysql-slow.log, by default logs queries longer than 3s
 
 There is a logratation config placed in `/etc/logrotate.d/`, which is run once a day.
 See `templates/logrotate.j2` for the config file.
@@ -289,7 +289,7 @@ A cluster, scaling to more hosts:
 
 It's possible to install the PMM2 client. It will monitor the slow-query, as [this is recommended](https://www.percona.com/doc/percona-monitoring-and-management/conf-mysql.html#id1).
 
-Ensure the pmm server is up and running, and is accepting connections.
+Ensure the pmm server is up and running, and accepting connections.
 
 ```yaml
 percona_pmm:
