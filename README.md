@@ -11,14 +11,15 @@ This role is tested for Ansible v2.9 and higher.
 
  * Percona XtraDB Cluster 8
  * Secured connection by encrypting mysql traffic
- * Bootstrapping a cluster, includes end2end testing
+ * Bootstrapping a cluster, includes end2end tests
  * Scaling: add or remove hosts from the cluster **with ease**!
- * Arbiter possibility
- * Adding a beautiful backup script
+ * Add an arbitrator with ease
+ * Adds a beautiful backup script
  * Automatically calculates the recommended mysql configuration settings, based on resources
  * Logrotation configuration
  * Adding user defined users
  * Adding user defined databases
+ * Idempotent and desired state
 
 ## Requirements
 
@@ -34,7 +35,7 @@ The arbiter requires less configuration, see below.
 
 ## Installation
 
-See `defaults/main.yml` for the variables which can be set.
+Please first check `defaults/main.yml` for all the variables and to get a good overview.
 
 First, the mysql user and group are set on the system. Then, the dependencies are installed.
 Since Percona is installed via the official Percona XtraDB repository, the GPG Keys are added.
@@ -53,7 +54,7 @@ percona_system_password: 'change_me'
 percona_sst_password: 'change_me'
 ```
 
-Before starting/restart the mysql service, a config test is executed. If the config check fails, then the role will also fail.
+Before starting/restart the mysql service, a config test is executed. If the config check fails, then the role will also fail. This is done in order to maintain a working mysql service. So please test properly on lower environments when adding/removing configurations to mysql.
 
 ## Clustering
 
@@ -74,7 +75,7 @@ percona_ssl: true
 percona_certs_tmp_dir: /tmp
 ```
 
-### Cluter variables
+### Cluster variables
 There must only be one bootstrapper, as this is important, I've created assertions for this matter. An arbiter can also be added, see below.
 
 Ensure the following variables are set for the nodes:
@@ -122,13 +123,14 @@ The arbiter also has encrypted traffic, since it makes use of the same certs.
 
 ## Scaling
 
-When a host is added to the play, and the vars are added to the new host, the cluster auto scales automagicly. This can be done from a single host to a cluster.
+When a host is added to the play, and the vars are added to the new host, the cluster auto scales automagicly! This can be done from a single host to a cluster.
 
 Or from a cluster, to a cluster + 1. ["Do not join several nodes at the same time to avoid overhead due to large amounts of traffic when a new node joins."](https://www.percona.com/doc/percona-xtradb-cluster/LATEST/add-node.html)
 
 The role will, by default, also restart all mysql instances, with a 10s delay between the restarts. See section `systemctl restart mysql` below.
 
-If no restart is desired, set this in the `group_vars/all.yml`
+If no restart is desired when scaling, set this variable in `group_vars/all.yml`
+Please leave this to `true`, in order to maintain the cluster.
 
 ```yaml
 percona_cluster_scale_restart_all: false
@@ -137,7 +139,13 @@ percona_cluster_scale_restart_all: false
 ## Login
 
 By default, the user debian-sys-maint is created, with root privileges.
-The credentials are set in `/etc/mysql/root.cnf` and is symlinked to `/root/.my.cnf`
+The credentials are set in `/etc/mysql/root.cnf` and is symlinked to `/root/.my.cnf`. One with sudo access can therefore simply execute `mysql` and execute mysql commands.
+
+```bash
+[vagrant@test-multi-02 ~]$ sudo mysql
+...
+mysql>
+```
 
 ## Backup
 
@@ -169,11 +177,17 @@ quick
 max_allowed_packet	= 64M
 ```
 
-These databases are skipped when creating a backup:
+These databases are skipped by default when creating a backup:
   * information_schema
   * performance_schema
 
-The backups are stored with a timestamp of that day. A symlink is created to `latest`.
+The backups are stored with a timestamp of that day. A symlink is created to `latest`. The older backup(s) are removed, set this with:
+
+```yaml
+percona_backup:
+  keepdays: '1'
+  ...
+```
 
 ## Restarting mysql
 
@@ -198,8 +212,14 @@ There are 2 mysql logs files, placed in /var/log/mysql.
  * Error log, named error.log
  * Slow log, named mysql-slow.log, by default logs queries longer than 3s
 
-There is a logratation config placed in `/etc/logrotate.d/`, which is run once a day.
+There is a logratation configuration placed in `/etc/logrotate.d/`, which is run once a day.
 See `templates/logrotate.j2` for the config file.
+
+```yaml
+percona_logrotate:
+  configure: true
+  rotate: 3
+```
 
 ## Databases and users
 
