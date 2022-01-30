@@ -1,7 +1,4 @@
 ---
-# see readme, this restarts mysql after a config change on each host with
-# 10s in between.
-percona_ansible_managed: true
 percona_package_deps:
   - gnupg2
   - socat
@@ -38,6 +35,10 @@ percona_logrotate:
 percona_log_dir: /var/log/mysql
 percona_config_dir: /etc/my.cnf.d
 
+# when true, and a config has changed, Ansible will restart the mysql service
+# when clustered, it will restart the hosts one by one with 10s in between
+# this is to keep the cluster in a stable state
+percona_ansible_managed: true
 percona_restart_time: "10"  # in seconds
 
 mysqld:

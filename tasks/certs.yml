@@ -48,6 +48,7 @@
         dest: "{{ percona_certs_tmp_dir }}/"
       loop: "{{ percona_certs }}"
       delegate_to: "{{ host_certs }}"
+      become: false
 
     - name: certs | copy required files to remaining hosts
       copy:

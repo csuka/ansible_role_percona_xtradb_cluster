@@ -39,39 +39,42 @@ See `defaults/main.yml` for the variables which can be set.
 First, the mysql user and group are set on the system. Then, the dependencies are installed.
 Since Percona is installed via the official Percona XtraDB repository, the GPG Keys are added.
 
-The pip package pymysql is required for certain mysql modules, so this is installed.
+The python package [pymysql](https://pypi.org/project/PyMySQL) is required for certain Ansible mysql modules, so this is installed by default.
 
-The mysql service file is edited to include the maximum of open files.
+The mysql service file is edited to include the maximum of open files, which is by default 65535. The daemons are reloaded after the change.
 
 Mysql binds by default to `0.0.0.0`.
 
-These values can be set in the `group_vars/all.yml`:
+The variables for passwords can be set in the `group_vars/all.yml`. Ensure to change all variables when running the role.
 
 ```yaml
-percona_root_password: 'something'
-percona_system_password: 'something'
-percona_sst_password: 'something'
+percona_root_password: 'change_me'
+percona_system_password: 'change_me'
+percona_sst_password: 'change_me'
 ```
 
-Note that a config test is executed before starting mysql.
+Before starting/restart the mysql service, a config test is executed. If the config check fails, then the role will also fail.
 
 ## Clustering
 
 When there are at least 2 nodes in the play, a multi-master cluster is possible.
 A 2 node galera cluster is a fundamentally broken design, as it cannot maintain uptime without a quorum and the ability of a node to go down to aid recovery. Take this into account when designing the cluster.
 
+### Secured connection
+
 By default, the [communication is encrypted](https://www.percona.com/doc/percona-xtradb-cluster/8.0/security/encrypt-traffic.html). As a best practice, the certificates are placed in `/etc/mysql/certs` with proper permissions. The certs in `/var/lib/mysql` are symlinked to `/etc/mysql/certs`.
 
 You should make a choice whether to use encrypted traffic or not before deploying this role. This role is not capable of switching from a 'disabled' certificate state to an enabled state.
 
-On creation, the keys/certificates will be fetched from a single host to the controller node.
-Then, they the files are copied to each host and removed from the controller node.
+When enabled, SSL certificates are used for a secured connection between the hosts. The certificates and keys are fetched from a single host to the controller node and then copied to all the other hosts. After placing, the files are removed from the Ansible controller. As you can imagine, the user executing ansible must have write permissions to the directory where the certs are temporarily stored.
 
 ```yaml
 percona_ssl: true
+# directory to place all keys/certs temporary on the controller node
 percona_certs_tmp_dir: /tmp
 ```
 
+### Cluter variables
 There must only be one bootstrapper, as this is important, I've created assertions for this matter. An arbiter can also be added, see below.
 
 Ensure the following variables are set for the nodes:
@@ -96,7 +99,7 @@ percona_cluster:
   ip_address: '10.0.0.112'
 ```
 
-### Arbiter
+### Arbitrator
 
 An arbiter can be included in the cluster, these are the required values for the arbiter, change accordingly:
 
@@ -132,7 +135,6 @@ percona_cluster_scale_restart_all: false
 ```
 
 ## Login
------
 
 By default, the user debian-sys-maint is created, with root privileges.
 The credentials are set in `/etc/mysql/root.cnf` and is symlinked to `/root/.my.cnf`
