@@ -14,14 +14,14 @@
 
 - name: assert | set fact when percona is installed
   set_fact:
-    installed: "{{ percona-xtradb-cluster-server' in ansible_facts.packages }}"
+    installed: "{{ 'percona-xtradb-cluster-server' in ansible_facts.packages }}"
 
 - name: assert | set multiple facts when clustering
   set_fact:
     bootstrapper: "{{ percona_cluster.bootstrapper }}"
     arbiter: "{{ percona_cluster.role == 'arbiter' }}"
     arbiter_installed: >-
-      "{{ 'percona-xtradb-cluster-garbd' in ansible_facts.packages }}"
+      {{ 'percona-xtradb-cluster-garbd' in ansible_facts.packages }}
   when: host_count != '1'
 
 - name: assert | ensure passwords are changed
