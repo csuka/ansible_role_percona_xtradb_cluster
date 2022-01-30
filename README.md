@@ -239,11 +239,11 @@ percona_users:
     host: localhost
 ```
 
-## mysql values
+## Mysql values
 
-See `defaults/main.yml`. As stated before, copy all values to a host_vars file, and edit values where applicable.
+As stated before, copy all values to a host_vars file, and edit values where applicable.
 
-To include custom keys/values in `mysqld.cnf`;
+To include custom keys/values in `mysqld.cnf`:
 
 ```yaml
 percona_custom_cnf:
@@ -264,7 +264,7 @@ log-output = file
 
 ## Example playbook
 
-As stated earlier, ensure to set the required variables in the host_vars of each host.
+Ensure to set the required variables in the host_vars of each host.
 
 Single host:
 
