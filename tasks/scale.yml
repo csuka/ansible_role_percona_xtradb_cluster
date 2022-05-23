@@ -58,12 +58,12 @@
 
     - name: scale | remove innodb_log_files on new host
       file:
-        path: "{{ item.name }}"
+        path: "/var/lib/mysql/{{ item }}"
         state: absent
       when: not cluster_status
       loop:
-        - {name: '/var/lib/mysql/ib_logfile0'}
-        - {name: '/var/lib/mysql/ib_logfile1'}
+        - ib_logfile0
+        - ib_logfile1
 
   when:
     - cluster_scale

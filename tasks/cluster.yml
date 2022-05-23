@@ -65,11 +65,11 @@
 
         - name: cluster | remove innodb_log_files
           file:
-            path: "{{ item.name }}"
+            path: "/var/lib/mysql/{{ item }}"
             state: absent
           loop:
-            - {name: '/var/lib/mysql/ib_logfile0'}
-            - {name: '/var/lib/mysql/ib_logfile1'}
+            - ib_logfile0
+            - ib_logfile1
 
         - name: cluster | bootstrap percona on bootstrapper
           systemd:

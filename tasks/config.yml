@@ -9,9 +9,12 @@
         group: root
         mode: '0644'
       loop:
-        - {src: 'mysqld.cnf.j2', dest: 'mysql/mysqld.cnf'}
-        - {src: 'logrotate.j2', dest: 'logrotate.d/mysql'}
-        - {src: 'my.cnf.j2', dest: 'my.cnf'}
+        - src: mysqld.cnf.j2
+          dest: mysql/mysqld.cnf
+        - src: logrotate.j2
+          dest: logrotate.d/mysql
+        - src: my.cnf.j2
+          dest: my.cnf
       register: config_set
 
     - name: config | test mysql config
@@ -37,8 +40,12 @@
         mode: "{{ item.mode }}"
       when: not datadir.stat.exists
       loop:
-        - {path: "{{ percona_log_dir }}", state: 'directory', mode: '0775'}
-        - {path: "{{ mysqld.pid_path }}", state: 'directory', mode: '0775'}
+        - path: "{{ percona_log_dir }}"
+          state: directory
+          mode: '0775'
+        - path: "{{ mysqld.pid_path }}"
+          state: directory
+          mode: '0775'
 
     - name: config | stat if log file exist
       stat:
@@ -54,8 +61,10 @@
         owner: mysql
         mode: "{{ item.mode }}"
       loop:
-        - {dest: "{{ mysqld.slow_log }}", mode: '0700'}
-        - {dest: "{{ mysqld.error_log }}", mode: '0700'}
+        - dest: "{{ mysqld.slow_log }}"
+          mode: '0700'
+        - dest: "{{ mysqld.error_log }}"
+          mode: '0700'
       when: not mysql_slow_log.stat.exists
 
   when: not arbiter
