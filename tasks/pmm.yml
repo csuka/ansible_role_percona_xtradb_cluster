@@ -46,7 +46,7 @@
   when:
     - bootstrapper or host_count == '1'
     - not pmm_configured
-  no_log: true
+  no_log: "{{ percona_no_log }}"
 
 - name: pmm | remove mysql service when scaling
   shell: pmm-admin remove mysql {{ inventory_hostname }}-mysql
@@ -65,7 +65,7 @@
     --socket={{ mysqld.socket }}
     --server-insecure-tls
     --server-url={{ pmm_url }}
-  no_log: true
+  no_log: "{{ percona_no_log }}"
   when:
     - percona_cluster.enabled
     - not pmm_configured
@@ -78,7 +78,7 @@
     --socket={{ mysqld.socket }}
     --server-insecure-tls
     --server-url={{ pmm_url }}
-  no_log: true
+  no_log: "{{ percona_no_log }}"
   when:
     - not percona_cluster.enabled
     - not pmm_configured

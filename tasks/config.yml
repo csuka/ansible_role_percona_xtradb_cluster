@@ -21,7 +21,7 @@
       shell: mysqld --defaults-file=/etc/mysql/mysqld.cnf --validate-config
       changed_when: false
 
-    - name: config | clean up unused files / directories
+    - name: config | clean up unused files in /etc/my.cnf.d/ directory
       file:
         path: /etc/my.cnf.d/
         state: absent

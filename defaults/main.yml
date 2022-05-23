@@ -11,6 +11,9 @@ percona_root_password: 'change_me'
 percona_system_password: 'change_me'
 percona_sst_password: 'change_me'
 
+# for debugging purposes, one can set this to false
+percona_no_log: "{{ percona_no_log }}"
+
 percona_ssl: true
 # directory to place all keys/certs temporary on the controller node
 percona_certs_tmp_dir: /tmp

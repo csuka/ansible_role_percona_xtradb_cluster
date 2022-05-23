@@ -69,6 +69,5 @@
         daemon_reload: true
       when: not arbiter
 
-  when:
-    - installed is defined and not installed
-    - arbiter_installed is defined and not arbiter_installed
+  when: installed is defined and not installed
+    # - arbiter_installed is defined and not arbiter_installed

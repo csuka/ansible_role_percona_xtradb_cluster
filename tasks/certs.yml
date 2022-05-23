@@ -77,7 +77,7 @@
         - not arbiter
         - not ca_check
 
-  no_log: true
+  no_log: "{{ percona_no_log }}"
   when: not ca_check or not ca_all
 
 - name: certs | ensure files are deleted from localhost

@@ -75,6 +75,13 @@ percona_ssl: true
 percona_certs_tmp_dir: /tmp
 ```
 
+One can disable no_log for debugging purposes with:
+
+```yaml
+# set to false to disable no_log
+percona_no_log: false
+```
+
 ### Cluster variables
 There must only be one bootstrapper, as this is important, I've created assertions for this matter. An arbiter can also be added, see below.
 

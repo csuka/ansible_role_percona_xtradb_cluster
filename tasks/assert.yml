@@ -24,6 +24,12 @@
       {{ 'percona-xtradb-cluster-garbd' in ansible_facts.packages }}
   when: host_count != '1'
 
+- name: assert | set facts when single node
+  set_fact:
+    arbiter: false
+    arbiter_installed: false
+  when: host_count == '1'
+
 - name: assert | ensure passwords are changed
   assert:
     that:

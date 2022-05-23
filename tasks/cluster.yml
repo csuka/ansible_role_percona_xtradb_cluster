@@ -73,7 +73,7 @@
 
         - name: cluster | bootstrap percona on bootstrapper
           systemd:
-            name: mysql@bootstrap.service
+            name: 'mysql@bootstrap.service'
             state: started
           when: bootstrapper
 
@@ -84,9 +84,8 @@
             user: sst
             password: "{{ percona_sst_password }}"
             priv: "*.*:grant,reload,lock tables,process,replication client"
-          no_log: true
-          when:
-            - bootstrapper
+          no_log: "{{ percona_no_log }}"
+          when: bootstrapper
 
         - name: cluster | start percona on not bootstrapper
           systemd:
@@ -104,8 +103,10 @@
             state: "{{ item.state }}"
           when: bootstrapper
           loop:
-            - {name: 'mysql@bootstrap.service', state: 'stopped'}
-            - {name: 'mysql', state: 'started'}
+            - name: 'mysql@bootstrap.service'
+              state: stopped
+            - name: mysql
+              state: started
 
         - name: cluster | pause 5 seconds to let hosts sync
           pause:

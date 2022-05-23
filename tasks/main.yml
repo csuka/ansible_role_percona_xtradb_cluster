@@ -12,7 +12,7 @@
   when: not arbiter
 
 - include_tasks: certs.yml
-  when: host_count != 1
+  when: host_count != '1'
 
 - include_tasks: config.yml
 

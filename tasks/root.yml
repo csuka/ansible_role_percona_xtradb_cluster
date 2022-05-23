@@ -12,7 +12,7 @@
         dest: /etc/my.cnf
         mode: '0644'
 
-    - name: root | start mysql to add the debian-sys-maint user
+    - name: root | start mysql
       systemd:
         name: mysql
         state: started
@@ -23,14 +23,14 @@
         grep 'temporary password' /var/log/mysqld.log |
         awk '{print $NF}' | tail -n 1
       register: temp_root_pw
-      no_log: true
+      no_log: "{{ percona_no_log }}"
 
     - name: root | set root password
       shell: >-
         mysqladmin -u root
         --password="{{ temp_root_pw.stdout }}"
         password "{{ percona_root_password }}"
-      no_log: true
+      no_log: "{{ percona_no_log }}"
 
     - name: root | set debian-sys-maint user and password
       mysql_user:
@@ -42,17 +42,17 @@
         login_unix_socket: /var/run/mysqld/mysqld.sock
         login_user: root
         login_password: "{{ percona_root_password }}"
-      no_log: true
+      no_log: "{{ percona_no_log }}"
 
     - name: root | copy root.cnf
       template:
         src: root.cnf.j2
         dest: /etc/mysql/root.cnf
-        mode: '0600'
-        owner: root
+        mode: '0660'
+        owner: mysql
         group: root
 
-    - name: root | make symlink of file for root db access
+    - name: root | symlink /etc/mysql/root.cnf to /root/.my.cnf
       file:
         state: link
         src: /etc/mysql/root.cnf
@@ -63,13 +63,13 @@
         name: ""
         host_all: true
         state: absent
-      no_log: true
+      no_log: "{{ percona_no_log }}"
 
     - name: root | secure root user
       mysql_user:
         name: root
         host: "{{ item }}"
-      no_log: true
+      no_log: "{{ percona_no_log }}"
       loop:
         - ::1
         - 127.0.0.1
@@ -81,7 +81,7 @@
         login_user: root
         state: absent
 
-    - name: root | stop mysql again
+    - name: root | stop mysql
       systemd:
         name: mysql
         state: stopped

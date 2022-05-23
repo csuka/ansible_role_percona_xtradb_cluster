@@ -24,4 +24,4 @@
   loop: "{{ percona_users }}"
   changed_when: false
   when: inventory_hostname == host_on_users or host_count == '1'
-  no_log: true
+  no_log: "{{ percona_no_log }}"
