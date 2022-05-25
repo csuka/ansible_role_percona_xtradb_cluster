@@ -5,7 +5,7 @@
 
 - name: arbiter | place gardb config in /etc/sysconfig/garbd
   template:
-    src: arbitrator.conf.j2
+    src: arbiter.j2
     dest: /etc/sysconfig/garb
     owner: root
     group: root
