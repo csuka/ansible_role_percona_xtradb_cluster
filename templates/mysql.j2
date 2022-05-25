@@ -1,0 +1,4 @@
+{{ ansible_managed | comment }}
+
+[Service]
+LimitNOFILE={{ mysqld.open_files_limit }}

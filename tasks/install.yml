@@ -57,17 +57,34 @@
         name: percona-xtradb-cluster
       when: not arbiter
 
-    - name: install | set open file limit in service file
-      lineinfile:
-        path: /usr/lib/systemd/system/mysql.service
-        regexp: '^LimitNOFILE='
-        line: "LimitNOFILE={{ mysqld.open_files_limit }}"
-      when: not arbiter
+  when:
+    - installed is defined
+    - not installed
+    - arbiter_installed is defined
+    - not arbiter_installed
 
-    - name: install | reload daemons, because a service file changed
-      systemd:
-        daemon_reload: true
-      when: not arbiter
+- name: install | ensure mysql.service.d in systemd directory exists
+  file:
+    path: /etc/systemd/system/mysql.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  when: not arbiter
 
-  when: installed is defined and not installed
-    # - arbiter_installed is defined and not arbiter_installed
+- name: install | template mysql override file
+  template:
+    src: mysql.j2
+    dest: /etc/systemd/system/mysql.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  when: not arbiter
+  register: override_mysql
+
+- name: install | reload daemons when a service file changed
+  systemd:
+    daemon_reload: true
+  when:
+    - override_mysql is defined
+    - override_mysql.changed

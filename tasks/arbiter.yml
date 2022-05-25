@@ -9,7 +9,7 @@
     dest: /etc/sysconfig/garb
     owner: root
     group: root
-    mode: '0644'
+    mode: 0644
   register: arb_conf
   tags:
     - molecule-idempotence-notest
@@ -25,25 +25,36 @@
     state: touch
     owner: root
     group: root
-    mode: '0774'
+    mode: 0774
   when: not garbd_check.stat.exists
 
-- name: arbiter | ensure root user is set in service file
-  lineinfile:
-    path: /usr/lib/systemd/system/garb.service
-    regexp: "^User="
-    line: "User=root"
-  register: config_garbd
+- name: arbiter | ensure garb.service.d in systemd directory exists
+  file:
+    path: /etc/systemd/system/garb.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: arbiter | template garb override file
+  template:
+    src: garb.j2
+    dest: /etc/systemd/system/garb.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  register: override_garbd
 
 - name: arbiter | reload deamons when garbd service file changed
   systemd:
     daemon_reload: true
-  when: config_garbd.changed
+  when: override_garbd.changed
 
-- name: arbiter | ensure garbd service is started
+- name: arbiter | ensure garbd service is started and enabled
   systemd:
     name: garb
     state: started
+    enabled: true
 
 - name: arbiter | restart garbd service when config changed
   systemd:
