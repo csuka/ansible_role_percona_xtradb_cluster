@@ -101,8 +101,7 @@ wsrep_provider_options="socket.ssl_cert=/etc/mysql/certs/server-cert.pem;socket.
 # enabled 4 uses encryption
 enabled                         = 4
 ssl_capath                      = /etc/mysql/certs/
-{% endif %}
-{% if not percona_ssl %}
+{% else %}
 pxc-encrypt-cluster-traffic     = OFF
 {% endif %}
 
@@ -113,15 +112,15 @@ max_allowed_packet              = {{ mysqld.mysqldump_max_allowed_packet }}
 [mysqld_safe]
 pid-file                        = {{ mysqld.pid }}
 
-# user defined section, keys and values. When nothing is defined, it is empty
 {% for section_name, section_contents in percona_custom_cnf.items() %}
+# user defined section, keys and values
 [{{ section_name }}]
 {% for key, value in section_contents.items() %}
 {% if value is defined and value %}
 {{ key }}                 = {{ value }}
 {% else %}
 {{ key }}
+# end of user defined section
 {% endif %}
 {% endfor %}
 {% endfor %}
-# end of user defined section
