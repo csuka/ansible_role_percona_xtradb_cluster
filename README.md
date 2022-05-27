@@ -134,7 +134,7 @@ When a host is added to the play, and the vars are added to the new host, the cl
 
 Or from a cluster, to a cluster + 1. ["Do not join several nodes at the same time to avoid overhead due to large amounts of traffic when a new node joins."](https://www.percona.com/doc/percona-xtradb-cluster/LATEST/add-node.html)
 
-The role will, by default, also restart all mysql instances, with a 10s delay between the restarts. See section `systemctl restart mysql` below.
+The role will, by default, also restart all mysql instances, with a default of a 10s delay between the restarts of each service on a system. See section `systemctl restart mysql` below.
 
 If no restart is desired when scaling, set this variable in `group_vars/all.yml`
 Please leave this to `true`, in order to maintain the cluster.
