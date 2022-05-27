@@ -42,7 +42,7 @@ Since Percona is installed via the official Percona XtraDB repository, the GPG K
 
 The python package [pymysql](https://pypi.org/project/PyMySQL) is required for certain Ansible mysql modules, so this is installed by default.
 
-The mysql service file is edited to include the maximum of open files, which is by default 65535. The daemons are reloaded after the change.
+An override file for the mysql service is placed to set the maximum open files, which is by default 65535. The daemons are reloaded after the change.
 
 Mysql binds by default to `0.0.0.0`.
 
@@ -122,9 +122,9 @@ percona_cluster:
   ip_address: '10.0.0.113'
 ```
 
- * The config file is placed in `/etc/sysconfig/garb`
- * The process runs as user `root`
- * Log file at `/var/log/garbd.log`
+ * The config file is placed at `/etc/sysconfig/garb`
+ * The log file is placed at `/var/log/garbd.log`
+ * The process runs as user `root`, an override file is placed for the service
 
 The arbiter also has encrypted traffic, since it makes use of the same certs.
 
