@@ -95,7 +95,7 @@ percona_cluster:
   role: master
   bootstrapper: true
   server_id: '1'
-  ip_address: '10.0.0.111'
+  ip_address: 10.0.0.111
 
 # vars for node2
 percona_cluster:
@@ -104,7 +104,7 @@ percona_cluster:
   role: master
   bootstrapper: false
   server_id: '2'
-  ip_address: '10.0.0.112'
+  ip_address: 10.0.0.112
 ```
 
 ### Arbitrator
