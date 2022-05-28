@@ -119,7 +119,7 @@ percona_cluster:
   role: arbiter
   bootstrapper: false
   server_id: '3'
-  ip_address: '10.0.0.113'
+  ip_address: 10.0.0.113
 ```
 
  * The config file is placed at `/etc/sysconfig/garb`
