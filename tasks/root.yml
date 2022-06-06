@@ -12,7 +12,7 @@
         dest: /etc/my.cnf
         mode: '0644'
 
-    - name: root | start mysql
+    - name: root | start and enable mysql
       systemd:
         name: mysql
         state: started
@@ -85,7 +85,6 @@
       systemd:
         name: mysql
         state: stopped
-        enabled: true
 
     - name: root | remove mysqld log file
       file:
