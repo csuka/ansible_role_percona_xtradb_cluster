@@ -18,4 +18,4 @@
     login_user: root
     state: present
   loop: "{{ percona_databases }}"
-  when: inventory_hostname == host_on_dbs or host_count == 1
+  when: inventory_hostname == host_on_dbs or host_count == '1'
