@@ -1,11 +1,11 @@
 ---
-- name: users | set fact to choose host to perform users task
+- name: databases | set fact to choose host to perform users task
   set_fact:
     host_on_dbs: "{{ item }}"
   loop: "{{ ansible_play_hosts }}"
   when: not arbiter
 
-- name: users | set fact for other hosts
+- name: databases | set fact for other hosts
   set_fact:
     host_on_dbs: false
   when: host_on_users is undefined
