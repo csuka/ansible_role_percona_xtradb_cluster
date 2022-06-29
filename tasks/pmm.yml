@@ -37,7 +37,7 @@
     login_host: ''
     login_unix_socket: "{{ mysqld.socket }}"
     name: "{{ percona_pmm.db_user }}"
-    password: "{{ percona_pmm.db_user }}"
+    password: "{{ percona_pmm.db_pass }}"
     encrypted: false
     priv: "*.*:SELECT,PROCESS,SUPER,REPLICATION CLIENT,RELOAD"
     host: localhost
