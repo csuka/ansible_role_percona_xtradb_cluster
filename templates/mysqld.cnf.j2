@@ -57,7 +57,6 @@ myisam_sort_buffer_size   = {{ mysqld.myisam_sort_buffer_size }}
 myisam-recover-options    = {{ mysqld.myisam_recover_options }}
 thread_cache_size         = {{ mysqld.thread_cache_size }}
 thread_stack              = {{ mysqld.thread_stack }}
-max_connections           = {{ mysqld.max_connections }}
 tmp_table_size            = {{ mysqld.tmp_table_size }}
 max_connections           = {{ mysqld.max_connections }}
 max_user_connections      = {{ mysqld.max_user_connections }}
@@ -68,8 +67,6 @@ net_write_timeout         = {{ mysqld.net_write_timeout }}
 net_read_timeout          = {{ mysqld.net_read_timeout }}
 open_files_limit          = {{ mysqld.open_files_limit }}
 back_log                  = {{ mysqld.back_log }}
-
-wait_timeout              = {{ mysqld.wait_timeout }}
 lower_case_table_names    = {{ mysqld.lower_case_table_names }}
 
 # enable smiley charset
