@@ -57,11 +57,10 @@ CUSTOM_UMASK=0002
 
 {% raw %}
 ################################################################
-#   Start actual script. Changes below must be communicated!   #
+#   Start actual script.                                       #
 ################################################################
 
-# Catch pipe errors that occur in mysqldump when piping through
-# gzip.
+# Catch pipe errors that occur in mysqldump when piping
 set -o pipefail
 
 # Prepare error and warning array
@@ -114,52 +113,6 @@ if [ ! "$(id -u -n)" = root ]; then
    ERROR_REASONS+=("Only user 'root' can run this script!")
    printError
 fi
-
-# Find and read our configuration file. The pre-set configuration
-# file location can be overridden by placing a configuration file
-# in the same directory as this script.
-
-# Get our current working directory
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-# LOCAL_CONFIG="${DIR}/mysql-backup.conf" # we don't use the local config anymore
-unset DIR
-
-# Check if the configuration file exists and has a size greater
-# then zero. If this is the case, strip out the vars and read it
-
-# not used anymore
-# if [[ -s $LOCAL_CONFIG ]] && [[ $LOCAL_CONFIG != $CONFIG_FILE ]]; then
-#    # Local configuration found
-#    CONFIG_TYPE=1
-#    FILENAME=$LOCAL_CONFIG
-# else
-#    if [[ -s $CONFIG_FILE ]];then
-#       FILENAME=$CONFIG_FILE
-#       CONFIG_TYPE=2
-#    else
-#       echo "No configuration file found..."
-#       CONFIG_TYPE=3
-#    fi
-# fi
-# if [[ $CONFIG_TYPE == 1 ]] || [[ $CONFIG_TYPE == 2 ]]; then
-#    STATS=$(stat -c %A "${FILENAME}")
-#
-#    if [[ ! $STATS == "-rw-------" ]]; then
-#       PERMISSION_TXT=""
-#       if [[ $STATS == "-rw-r--r--" ]]; then
-#          PERMISSION_TXT+="Please remove the READ rights from the 'group' and 'others' of the configuration file"
-#       else
-#          PERMISSION_TXT+="The permissions are incorrect on the configuration file!"
-#       fi
-#       PERMISSION_TXT+="\n     Use 'chmod 600 ${FILENAME}'"
-#       WARNING_REASONS+=("${PERMISSION_TXT}")
-#       unset PERMISSION_TXT
-#    fi
-#    unset STATS
-#
-#    source <( sed -n 's/^\s*CONFIG_*//p' $FILENAME )
-#    unset FILENAME
-# fi
 
 # Check if multiple commandline parameters are given
 if [[ "$#" -gt 1 ]];then
@@ -285,7 +238,7 @@ if [[ -n $DB_USER ]] && [[ -z $DB_PASS ]];then
    printError
 fi
 
-# Check if the user is a idiot
+# Check if the user is an idiot
 if [[ ! -z $DB_USER ]] && [[ $DB_USER == $DB_PASS ]];then
    ERROR_REASONS+=("MySQL Username and Password are identical. This is a security risk!")
    printError
