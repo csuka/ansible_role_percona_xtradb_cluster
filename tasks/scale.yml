@@ -90,8 +90,6 @@
       run_once: true
       delegate_to: "{{ item }}"
       loop: "{{ ansible_play_hosts }}"
-      args:
-        warn: false
       when:
         - item != cluster_host_which_is_skipped
         - cluster_result is undefined or cluster_result is not failed

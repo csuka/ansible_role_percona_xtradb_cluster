@@ -105,13 +105,12 @@
 # if that fails, the play is stopped
 - name: config | restart mysql service one by one
   shell: >
-    systemctl restart mysql ; mysql -e 'show databases;' &&
-    sleep {{ percona_restart_time }}
+    command -v mysql && systemctl restart mysql ;
+    command -v mysql && mysql -e 'show databases;' && sleep {{ percona_restart_time }}
+    || echo
   run_once: true
   delegate_to: "{{ item }}"
   loop: "{{ ansible_play_hosts }}"
-  args:
-    warn: false
   when:
     - host_count == '1' or item != host_which_is_skipped
     - result is undefined or result is not failed

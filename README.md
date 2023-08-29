@@ -1,6 +1,6 @@
-# Percona XtraDB Cluster 8
+# Percona XtraDB Cluster
 
-An Ansible role that installs, configures and manages Percona XtraDB cluster 8 for EL 8.
+An Ansible role that installs, configures and manages Percona XtraDB cluster 8 for EL 8 and 9, e.g. Alma/RHEL/Rocky/CentOS.
 This is for either for a single node, or when using 2 nodes or more. The functionality to add an arbiter is included as well.
 
 **Please read this file carefully before deploying this Ansible role**
@@ -40,7 +40,7 @@ Please first check `defaults/main.yml` for all the variables and to get a good o
 First, the mysql user and group are set on the system. Then, the dependencies are installed.
 Since Percona is installed via the official Percona XtraDB repository, the GPG Keys are added.
 
-The python package [pymysql](https://pypi.org/project/PyMySQL) is required for certain Ansible mysql modules, so this is installed by default.
+The python package [pymysql](https://pypi.org/project/PyMySQL) is required for certain Ansible mysql modules, so this is installed by default. It is installed via pip3, which is installed by default w setuptools.
 
 An override file for the mysql service is placed to set the maximum open files, which is by default 65535. The daemons are reloaded after the change.
 
@@ -234,8 +234,8 @@ Append your own databases and users, set in `group_vars/all.yml`:
 
 ```yaml
 percona_databases:
-  - name: my_first_db
-  - name: another_db
+  - my_first_db
+  - another_db
 
 percona_users:
   - name: erik
@@ -331,6 +331,10 @@ percona_pmm:
 ```
 
 The `(db_pass|db_user)` are created on the mysql database.
+
+## Development
+
+There is a reset playbook to remove all mongo files. This is useful for development purposes, see tasks/reset.yml. It is commented out by design.
 
 ## Molecule
 

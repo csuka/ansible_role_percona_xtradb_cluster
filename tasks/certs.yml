@@ -46,8 +46,10 @@
         src: "/var/lib/mysql/{{ item }}.pem"
         flat: true
         dest: "{{ percona_certs_tmp_dir }}/"
+      when:
+        - bootstrapper is defined
+        - bootstrapper
       loop: "{{ percona_certs }}"
-      delegate_to: "{{ host_certs }}"
 
     - name: certs | copy required files to remaining hosts
       copy:

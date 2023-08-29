@@ -38,7 +38,10 @@
     - name: install | pymysql via pip3
       pip:
         executable: pip3
-        name: pymysql
+        name: "{{ item }}"
+      loop:
+        - setuptools
+        - pymysql
 
     - name: install | import RPM GPG key
       rpm_key:

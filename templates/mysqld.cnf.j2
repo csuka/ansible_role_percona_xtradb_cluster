@@ -92,7 +92,7 @@ thread_pool_size                = {{ mysqld.thread_pool_size }}
 {% if percona_ssl %}
 [percona]
 ssl_capath                      = /etc/mysql/certs/
-wsrep_provider_options="socket.ssl_cert=/etc/mysql/certs/server-cert.pem;socket.ssl_key=/etc/mysql/certs/server-key.pem;socket.ssl_ca=/etc/mysql/certs/ca.pem"
+wsrep_provider_options="socket.ssl=ON;socket.ssl_cert=/etc/mysql/certs/server-cert.pem;socket.ssl_key=/etc/mysql/certs/server-key.pem;socket.ssl_ca=/etc/mysql/certs/ca.pem"
 
 [sst]
 # enabled 4 uses encryption

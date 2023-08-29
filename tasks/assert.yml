@@ -24,7 +24,7 @@
       {{ 'percona-xtradb-cluster-garbd' in ansible_facts.packages }}
   when: host_count != '1'
 
-- name: assert | set facts when single node
+- name: assert | set facts when one host in the play
   set_fact:
     arbiter: false
     arbiter_installed: false

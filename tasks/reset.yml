@@ -1,0 +1,34 @@
+---
+# this playbook is for development purposes.
+# it simply removes all mysql related files quick 'n dirty
+# this is configured to 'quickly' start with a fresh setup again
+
+- name: reset | repo gpg key
+  rpm_key:
+    key: https://www.percona.com/downloads/RPM-GPG-KEY-percona
+    state: absent
+
+- name: reset | remove mysql and garb from system
+  shell: "{{ item }}"
+  loop:
+    - "python3 -m pip uninstall pymysql -y"
+    - dnf remove 'percona*' -y
+    - "rm -rf /root/.my.cnf"
+    - "rm -rf /etc/yum.repos.d/percona*"
+    - "rm -rf /etc/mysql*"
+    - "rm -rf /var/lib/mysql*"
+    - "rm -rf /etc/systemd/system/mysql.service*"
+    - "rm -rf /etc/sysconfig/garb"
+    - "rm -rf var/log/garbd.log"
+    - "rm -rf /etc/systemd/system/garb.service.d"
+    - userdel mysql | echo
+    - groupdel mysql | echo
+
+- name: reset | remove backup scripts
+  cron:
+    name: mysql backup
+    state: absent
+
+- name: reset | reload daemons
+  systemd:
+    daemon_reload: true

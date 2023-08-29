@@ -1,8 +1,11 @@
 ---
-# Playbook is required. Do not skip it
+# these reset tasks is meant for development, thus commented out by design
+# - include_tasks: reset.yml
+
+# tasks are required. Do not skip it
 - include_tasks: assert.yml
 
-# Playbook is required. Do not skip it
+# tasks is required. Do not skip it
 - include_tasks: ip.yml
   when: percona_cluster.enabled
 
