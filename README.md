@@ -7,7 +7,7 @@ This is for either for a single node, or when using 2 nodes or more. The functio
 
 ## Main functionalities
 
-This role is tested for Ansible v2.9 and higher.
+This role is tested w Ansible v2.9 and higher.
 
  * Percona XtraDB Cluster 8
  * Secured connection by encrypting mysql traffic
@@ -277,9 +277,8 @@ Single host:
 
 ```yaml
 ---
-- hosts:
-    - host1
-  become: True
+- hosts: host_1
+  become: true
   roles:
     - percona_xtradb_cluster
 ```
@@ -334,7 +333,7 @@ The `(db_pass|db_user)` are created on the mysql database.
 
 ## Development
 
-There is a reset playbook to remove all mongo files. This is useful for development purposes, see tasks/reset.yml. It is commented out by design.
+There is a reset playbook to remove all mysql files. This is useful for development purposes, see tasks/reset.yml. It is commented out by design.
 
 ## Molecule
 
