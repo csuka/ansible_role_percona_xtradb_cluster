@@ -4,7 +4,6 @@
     login_host: ''
     login_unix_socket: /var/run/mysqld/mysqld.sock
     name: "{{ item }}"
-    login_user: root
     state: present
   loop: "{{ percona_databases }}"
   when: (bootstrapper is defined and bootstrapper) or host_count == '1'
