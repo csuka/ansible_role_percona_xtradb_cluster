@@ -45,7 +45,7 @@
 
     - name: install | import RPM GPG key
       rpm_key:
-        key: https://www.percona.com/downloads/RPM-GPG-KEY-percona
+        key: https://downloads.percona.com/downloads/RPM-GPG-KEY-percona
 
     - name: install | set repo
       yum:
