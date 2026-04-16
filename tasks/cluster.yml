@@ -80,10 +80,10 @@
         - name: cluster | create SST user on bootstrapper
           mysql_user:
             login_unix_socket: /var/run/mysqld/mysqld.sock
-            login_host: ''
-            user: sst
+            name: sst
             password: "{{ percona_sst_password }}"
-            priv: "*.*:grant,reload,lock tables,process,replication client"
+            priv: "*.*:GRANT,RELOAD,LOCK TABLES,PROCESS,REPLICATION CLIENT"
+            state: present
           no_log: "{{ percona_no_log }}"
           when: bootstrapper
 
