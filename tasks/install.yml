@@ -51,6 +51,11 @@
       yum:
         name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
 
+    - name: install | update percona-release to latest
+      dnf:
+        name: percona-release
+        state: latest
+
     - name: install | enable pxc repo
       shell: "percona-release setup -y pxc{{ percona_pxc_version | replace('.', '') }}"
       when: not arbiter_installed
