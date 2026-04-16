@@ -5,10 +5,20 @@
 
 [client]
 socket   = {{ mysqld.socket }}
+{% if ansible_os_family == 'Debian' %}
 user     = debian-sys-maint
 password = {{ percona_system_password }}
+{% else %}
+user     = root
+password = {{ percona_root_password }}
+{% endif %}
 
 [mysql_upgrade]
 socket   = {{ mysqld.socket }}
+{% if ansible_os_family == 'Debian' %}
 user     = debian-sys-maint
 password = {{ percona_system_password }}
+{% else %}
+user     = root
+password = {{ percona_root_password }}
+{% endif %}
