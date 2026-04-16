@@ -1,5 +1,6 @@
 ---
 percona_pxc_version: '8.4'
+percona_pxc_repo_suffix: '84-lts'
 
 percona_package_deps:
   - gnupg2

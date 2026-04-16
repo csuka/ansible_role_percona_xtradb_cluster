@@ -47,12 +47,14 @@
       rpm_key:
         key: https://repo.percona.com/yum/PERCONA-PACKAGING-KEY
 
-    - name: install | set repo
-      yum:
-        name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-
-    - name: install | enable pxc repo
-      shell: "/usr/bin/percona-release setup -y pxc{{ percona_pxc_version | replace('.', '') }}"
+    - name: install | set percona pxc repo
+      yum_repository:
+        name: "percona-pxc-{{ percona_pxc_version | replace('.', '') }}"
+        description: "Percona XtraDB Cluster {{ percona_pxc_version }} YUM repository"
+        baseurl: "http://repo.percona.com/pxc-{{ percona_pxc_repo_suffix }}/yum/release/$releasever/RPMS/x86_64"
+        enabled: true
+        gpgcheck: true
+        gpgkey: file:///etc/pki/rpm-gpg/PERCONA-PACKAGING-KEY
       when: not arbiter_installed
 
     - name: install | percona xtradb cluster
