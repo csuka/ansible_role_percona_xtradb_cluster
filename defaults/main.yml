@@ -103,7 +103,7 @@ mysqld:
     charset: utf8mb4
     collate: utf8mb4_unicode_ci
   innodb:
-    dedicated_server: enabled
+    dedicated_server: 'ON'
     flush_method: O_DIRECT
     file_per_table: 1
     temp_data_file_path: ibtmp1:12M:autoextend:max:1G
