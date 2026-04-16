@@ -51,8 +51,8 @@
       yum:
         name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
 
-    - name: install | enable pxc 80 repo
-      shell: percona-release setup -y pxc80
+    - name: install | enable pxc repo
+      shell: "percona-release setup -y pxc{{ percona_pxc_version | replace('.', '') }}"
       when: not arbiter_installed
 
     - name: install | percona xtradb cluster
