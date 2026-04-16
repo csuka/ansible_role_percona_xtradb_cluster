@@ -61,6 +61,7 @@
 
     - name: root | delete anonymous connections
       mysql_user:
+        login_unix_socket: "{{ mysqld.socket }}"
         name: ""
         host_all: true
         state: absent

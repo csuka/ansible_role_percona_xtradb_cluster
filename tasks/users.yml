@@ -1,7 +1,6 @@
 ---
 - name: users | ensure users are set
   mysql_user:
-    login_host: ''
     login_unix_socket: "{{ mysqld.socket }}"
     name: "{{ item.name }}"
     password: "{{ item.password }}"
@@ -10,6 +9,7 @@
     host: "{{ item.host }}"
     state: "{{ item.state }}"
     update_password: always
+    plugin: caching_sha2_password
   loop: "{{ percona_users }}"
   changed_when: false
   when: (bootstrapper is defined and bootstrapper) or host_count == '1'

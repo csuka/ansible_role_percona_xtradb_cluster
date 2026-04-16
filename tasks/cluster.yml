@@ -83,6 +83,7 @@
             name: sst
             password: "{{ percona_sst_password }}"
             priv: "*.*:GRANT,RELOAD,LOCK TABLES,PROCESS,REPLICATION CLIENT"
+            plugin: caching_sha2_password
             state: present
           no_log: "{{ percona_no_log }}"
           when: bootstrapper
