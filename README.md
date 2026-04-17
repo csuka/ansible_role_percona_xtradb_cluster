@@ -9,7 +9,7 @@ This is for either for a single node, or when using 2 nodes or more. The functio
 
 This role is tested w Ansible v2.9 and higher.
 
- * Percona XtraDB Cluster 8
+ * Percona XtraDB Cluster 8.0 and 8.4 LTS
  * Secured connection by encrypting mysql traffic
  * Bootstrapping a cluster, includes end2end tests
  * Scaling: add or remove hosts from the cluster **with ease**!
@@ -28,6 +28,11 @@ This role is tested w Ansible v2.9 and higher.
  * When clustering, the nodes are able to connect to each other via ports 4444, 4567, 4568, see [info](https://www.percona.com/doc/percona-xtradb-cluster/LATEST/faq.html#what-tcp-ports-are-used-by-percona-xtradb-cluster)
  * Plenty of disk space, keep the backup in mind as well. The use of an SSD is preferred for performance
  * Internet connection to download installation files
+ * Ansible collection `community.mysql >= 3.8.0`
+
+```bash
+ansible-galaxy collection install community.mysql
+```
 
 Copy the variables from `default/main.yml` and adjust them for each node in it's variable folder.
 
@@ -38,7 +43,8 @@ The arbiter requires less configuration, see below.
 Please first check `defaults/main.yml` for all the variables and to get a good overview.
 
 First, the mysql user and group are set on the system. Then, the dependencies are installed.
-Since Percona is installed via the official Percona XtraDB repository, the GPG Keys are added.
+Since Percona is installed via the official Percona XtraDB repository, the GPG Keys are added and
+the repository is configured directly via the Ansible `yum_repository` module.
 
 The python package [pymysql](https://pypi.org/project/PyMySQL) is required for certain Ansible mysql modules, so this is installed by default. It is installed via pip3, which is installed by default w setuptools.
 
@@ -52,6 +58,15 @@ The variables for passwords can be set in the `group_vars/all.yml`. Ensure to ch
 percona_root_password: 'change_me'
 percona_system_password: 'change_me'
 percona_sst_password: 'change_me'
+```
+
+### PXC version
+
+By default, PXC 8.4 LTS is installed. To install PXC 8.0 instead, override the following variables:
+
+```yaml
+percona_pxc_version: '8.0'
+percona_pxc_repo_suffix: '80'
 ```
 
 Before starting/restart the mysql service, a config test is executed. If the config check fails, then the role will also fail. This is done in order to maintain a working mysql service. So please test properly on lower environments when adding/removing configurations to mysql.
@@ -145,8 +160,9 @@ percona_cluster_scale_restart_all: false
 
 ## Login
 
-By default, the user debian-sys-maint is created, with root privileges.
-The credentials are set in `/etc/mysql/root.cnf` and is symlinked to `/root/.my.cnf`. One with sudo access can therefore simply execute `mysql` and execute mysql commands.
+On RHEL-based systems, the `root` user credentials are stored in `/etc/mysql/root.cnf`, symlinked to `/root/.my.cnf`. One with sudo access can therefore simply execute `mysql` and execute mysql commands.
+
+On Debian-based systems, the `debian-sys-maint` user is created with root privileges, and its credentials are stored in the same files.
 
 ```bash
 [vagrant@test-multi-02 ~]$ sudo mysql

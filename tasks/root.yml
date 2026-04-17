@@ -43,6 +43,7 @@
         login_user: root
         login_password: "{{ percona_root_password }}"
       no_log: "{{ percona_no_log }}"
+      when: ansible_os_family == 'Debian'
 
     - name: root | copy root.cnf
       template:
@@ -60,6 +61,7 @@
 
     - name: root | delete anonymous connections
       mysql_user:
+        login_unix_socket: "{{ mysqld.socket }}"
         name: ""
         host_all: true
         state: absent

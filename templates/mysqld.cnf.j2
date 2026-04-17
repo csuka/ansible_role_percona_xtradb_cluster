@@ -73,7 +73,6 @@ lower_case_table_names    = {{ mysqld.lower_case_table_names }}
 init_connect                    = 'SET NAMES {{ mysqld.default.charset }} COLLATE {{ mysqld.default.collate }}'
 character-set-server            = {{ mysqld.default.charset }}
 collation-server                = {{ mysqld.default.collate }}
-skip-character-set-client-handshake
 
 # InnoDB settings
 innodb_dedicated_server         = {{ mysqld.innodb.dedicated_server }}
