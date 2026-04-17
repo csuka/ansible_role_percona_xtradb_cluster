@@ -78,13 +78,13 @@
           when: bootstrapper
 
         - name: cluster | create SST user on bootstrapper
-          mysql_user:
-            login_unix_socket: /var/run/mysqld/mysqld.sock
-            name: sst
-            password: "{{ percona_sst_password }}"
-            priv: "*.*:GRANT,RELOAD,LOCK TABLES,PROCESS,REPLICATION CLIENT"
-            plugin: caching_sha2_password
-            state: present
+          shell: >
+            mysql -e "CREATE USER IF NOT EXISTS 'sst'@'%'
+            IDENTIFIED WITH caching_sha2_password BY '{{ percona_sst_password }}';
+            GRANT RELOAD, LOCK TABLES, REPLICATION CLIENT, PROCESS ON *.*
+            TO 'sst'@'%';
+            ALTER USER 'sst'@'%'
+            IDENTIFIED WITH caching_sha2_password BY '{{ percona_sst_password }}';"
           no_log: "{{ percona_no_log }}"
           when: bootstrapper
 
